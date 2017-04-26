@@ -1,0 +1,6 @@
+[package]
+name = "agile_archer"
+version = "0.1.0"
+authors = ["Aaron McLeod <aaron.g.mcleod@gmail.com>"]
+
+[dependencies]
