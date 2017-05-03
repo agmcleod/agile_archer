@@ -14,6 +14,8 @@ use gfx::traits::FactoryExt;
 use genmesh::{Vertices, Triangulate};
 use genmesh::generators::{Plane, SharedVertex, IndexedPolygon};
 
+use components;
+
 // this is a value based on a max buffer size (and hence tilemap size) of 64x64
 // I imagine you would have a max buffer length, with multiple TileMap instances
 // of varying sizes based on current screen resolution
@@ -129,11 +131,7 @@ impl<R> TileMapPlane<R>
         };
 
         // TODO: change the coords here
-        let view: Matrix4<f32> = Matrix4::look_at(
-            Point3::new(0.0, 0.0, 800.0),
-            Point3::new(0.0, 0.0, 0.0),
-            Vector3::unit_y(),
-        );
+        let view: Matrix4<f32> = renderer::get_view(0.0, 0.0);
 
         let mut map_data = Vec::with_capacity(total_size as usize);
         for _ in 0..total_size {
@@ -371,11 +369,13 @@ impl <'a, R>TileMapRenderer<'a, R>
     fn render<C>(&self, encoder: &mut gfx::Encoder<R, C>, world: &World)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
     {
+
+        let camera = world.read_resource::<components::Camera>().wait();
         encoder.update_constant_buffer(&self.projection, &ProjectionStuff {
             // use identity matrix until i figure out how i want to do map transforms
             model: [[1f32, 0f32, 0f32, 0f32], [0f32, 1f32, 0f32, 0f32], [0f32, 0f32, 1f32, 0f32], [0f32, 0f32, 0f32, 1f32]],
-            proj: scene.camera.proj,
-            view: scene.camera.view,
+            proj: (*camera).0.into(),
+            view: renderer::get_view(0.0, 0.0).into(),
         });
 
         let tilemap = self.tilemap;

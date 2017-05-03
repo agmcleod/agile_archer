@@ -8,6 +8,7 @@ extern crate genmesh;
 extern crate tiled;
 
 use gfx::Device;
+use specs::World;
 
 use std::path::Path;
 use std::fs::File;
@@ -15,6 +16,7 @@ use tiled::parse;
 
 mod renderer;
 mod loader;
+mod components;
 
 use renderer::{ColorFormat, DepthFormat};
 
@@ -37,7 +39,16 @@ fn main() {
         color: main_color,
         depth: main_depth,
     };
-    let tilemap_renderer = renderer::tiled::TileMap::new(&map, &mut factory, dim[0] / dim[1], &target);
+
+    let mut planner = {
+        let mut world = World::new();
+        world.add_resource::<components::Camera>(renderer::get_ortho() as components::Camera);
+        specs::Planner::<()>::new(world)
+    };
+
+    let tilemap_draw_state = renderer::tiled::TileMap::new(&map, &mut factory, dim[0] / dim[1], &target);
+    let tilemap_renderer = renderer::tiled::TileMapRenderer::new(&tilemap_draw_state, &mut factory);
+
     'main: loop {
         for event in window.poll_events() {
             match event {
@@ -47,6 +58,9 @@ fn main() {
             }
         }
         window.swap_buffers().unwrap();
+
+        tilemap_renderer.render();
+
         device.cleanup();
     }
 }

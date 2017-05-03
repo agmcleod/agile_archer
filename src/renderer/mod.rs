@@ -1,7 +1,7 @@
 extern crate gfx;
 extern crate cgmath;
 
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Point3, Vector3};
 use gfx::traits::FactoryExt;
 
 pub mod tiled;
@@ -64,6 +64,14 @@ pub fn get_ortho() -> Matrix4<f32> {
         -hw, hw,
         -hh, hh,
         0.0, 1.0,
+    )
+}
+
+pub fn get_view(x: f32, y: f32) -> Matrix4<f32> {
+    Matrix4::look_at(
+        Point3::new(x, y, 800.0),
+        Point3::new(x, y, 0.0),
+        Vector3::unit_y(),
     )
 }
 
