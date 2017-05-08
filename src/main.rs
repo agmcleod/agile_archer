@@ -46,10 +46,9 @@ fn main() {
         specs::Planner::<()>::new(world)
     };
 
-    let mut tilemap_draw_state = renderer::tiled::TileMap::new(&map, &mut factory, &target);
-    renderer::tiled::populate_tilemap(&mut tilemap_draw_state, &map);
-    tilemap_draw_state.set_focus([0, 0]);
-    let tilemap_renderer = renderer::tiled::TileMapRenderer::new(&tilemap_draw_state, &mut factory);
+    let mut tilemap_renderer = renderer::tiled::TileMapRenderer::new(&map, &mut factory, &target);
+    renderer::tiled::populate_tilemap(&mut tilemap_renderer, &map);
+    tilemap_renderer.set_focus([0, 0]);
 
     'main: loop {
         for event in window.poll_events() {

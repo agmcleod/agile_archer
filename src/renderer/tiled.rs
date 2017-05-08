@@ -180,7 +180,7 @@ impl<R> TileMapPlane<R>
     }
 }
 
-pub fn populate_tilemap<R>(tilemap: &mut TileMap<R>, map_data: &tiled::Map)
+pub fn populate_tilemap<R>(tilemap: &mut TileMapRenderer<R>, map_data: &tiled::Map)
     where R: gfx::Resources
 {
     let layers = &map_data.layers;
@@ -203,7 +203,7 @@ pub fn populate_tilemap<R>(tilemap: &mut TileMap<R>, map_data: &tiled::Map)
     }
 }
 
-pub struct TileMap<R: gfx::Resources> {
+pub struct TileMapRenderer<R: gfx::Resources> {
     pub tiles: Vec<TileMapData>,
     tilemap_plane: TileMapPlane<R>,
     tile_size: f32,
@@ -212,12 +212,14 @@ pub struct TileMap<R: gfx::Resources> {
     limit_coords: [usize; 2],
     focus_coords: [usize; 2],
     focus_dirty: bool,
+    projection: gfx::handle::Buffer<R, ProjectionStuff>,
+    pso: gfx::PipelineState<R, pipe::Meta>,
 }
 
-impl<R> TileMap<R>
+impl<R> TileMapRenderer<R>
     where R: gfx::Resources
 {
-    pub fn new<F>(map: &tiled::Map, factory: &mut F, target: &renderer::WindowTargets<R>) -> TileMap<R>
+    pub fn new<F>(map: &tiled::Map, factory: &mut F, target: &renderer::WindowTargets<R>) -> TileMapRenderer<R>
         where F: gfx::Factory<R>
     {
         let mut tiles = Vec::with_capacity((map.width * map.height) as usize);
@@ -225,7 +227,10 @@ impl<R> TileMap<R>
             tiles.push(TileMapData::new_empty());
         }
 
-        TileMap {
+        let vert_src = include_bytes!("shaders/tilemap.glslv");
+        let frag_src = include_bytes!("shaders/tilemap.glslf");
+
+        TileMapRenderer {
             tiles: tiles,
             tilemap_plane: TileMapPlane::new(
                 factory, map, target
@@ -236,6 +241,8 @@ impl<R> TileMap<R>
             limit_coords: [0, 0],
             focus_coords: [0, 0],
             focus_dirty: false,
+            projection: factory.create_constant_buffer(1),
+            pso: factory.create_pipeline_simple(vert_src, frag_src, pipe::new()).unwrap(),
         }
     }
 
@@ -323,29 +330,6 @@ impl<R> TileMap<R>
         let idx = self.calc_idx(xpos, ypos);
         self.tiles[idx] = TileMapData::new(data);
     }
-}
-
-pub struct TileMapRenderer<'a, R: gfx::Resources> {
-    projection: gfx::handle::Buffer<R, ProjectionStuff>,
-    tilemap: &'a TileMap<R>,
-    pso: gfx::PipelineState<R, pipe::Meta>,
-}
-
-impl <'a, R>TileMapRenderer<'a, R>
-    where R: gfx::Resources
-{
-    pub fn new<F>(tilemap: &'a TileMap<R>, factory: &mut F) -> TileMapRenderer<'a, R>
-        where F: gfx::Factory<R>
-    {
-        let vert_src = include_bytes!("shaders/tilemap.glslv");
-        let frag_src = include_bytes!("shaders/tilemap.glslf");
-
-        TileMapRenderer {
-            projection: factory.create_constant_buffer(1),
-            tilemap: tilemap,
-            pso: factory.create_pipeline_simple(vert_src, frag_src, pipe::new()).unwrap(),
-        }
-    }
 
     pub fn render<C>(&self, encoder: &mut gfx::Encoder<R, C>, world: &World)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
@@ -359,10 +343,8 @@ impl <'a, R>TileMapRenderer<'a, R>
             view: renderer::get_view(0.0, 0.0).into(),
         });
 
-        let tilemap = self.tilemap;
+        self.tilemap_plane.prepare_buffers(encoder, self.focus_dirty);
 
-        tilemap.tilemap_plane.prepare_buffers(encoder, self.tilemap.focus_dirty);
-
-        encoder.draw(&tilemap.tilemap_plane.slice, &self.pso, &tilemap.tilemap_plane.params);
+        encoder.draw(&self.tilemap_plane.slice, &self.pso, &self.tilemap_plane.params);
     }
 }
