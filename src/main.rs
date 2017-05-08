@@ -29,12 +29,12 @@ fn main() {
     let (window, mut device, mut factory, main_color, mut main_depth) =
         gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder);
 
-    let encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
+    let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
     let map_file = File::open(&Path::new("./resources/map.tmx")).unwrap();
     let map = parse(map_file).unwrap();
 
-    let basic = renderer::Basic::new(&mut factory, encoder);
+    let basic = renderer::Basic::new(&mut factory);
     let target = renderer::WindowTargets{
         color: main_color,
         depth: main_depth,
@@ -42,11 +42,13 @@ fn main() {
 
     let mut planner = {
         let mut world = World::new();
-        world.add_resource::<components::Camera>(renderer::get_ortho() as components::Camera);
+        world.add_resource::<components::Camera>(components::Camera(renderer::get_ortho()));
         specs::Planner::<()>::new(world)
     };
 
-    let tilemap_draw_state = renderer::tiled::TileMap::new(&map, &mut factory, dim[0] / dim[1], &target);
+    let mut tilemap_draw_state = renderer::tiled::TileMap::new(&map, &mut factory, &target);
+    renderer::tiled::populate_tilemap(&mut tilemap_draw_state, &map);
+    tilemap_draw_state.set_focus([0, 0]);
     let tilemap_renderer = renderer::tiled::TileMapRenderer::new(&tilemap_draw_state, &mut factory);
 
     'main: loop {
@@ -57,10 +59,10 @@ fn main() {
                 _ => {}
             }
         }
+
+        tilemap_renderer.render(&mut encoder, planner.mut_world());
+
         window.swap_buffers().unwrap();
-
-        tilemap_renderer.render();
-
         device.cleanup();
     }
 }

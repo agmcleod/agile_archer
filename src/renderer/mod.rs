@@ -29,16 +29,14 @@ pub struct WindowTargets<R: gfx::Resources> {
     pub depth: gfx::handle::DepthStencilView<R, DepthFormat>,
 }
 
-pub struct Basic<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
-    encoder: gfx::Encoder<R, C>,
+pub struct Basic<R: gfx::Resources> {
     pso: gfx::PipelineState<R, pipe::Meta>,
 }
 
-impl<R, C> Basic<R, C>
-    where R: gfx::Resources,
-        C: gfx::CommandBuffer<R>
+impl<R> Basic<R>
+    where R: gfx::Resources
 {
-    pub fn new<F>(factory: &mut F, encoder: gfx::Encoder<R, C>) -> Basic<R, C>
+    pub fn new<F>(factory: &mut F) -> Basic<R>
         where F: gfx::Factory<R>
     {
         use gfx::traits::FactoryExt;
@@ -50,7 +48,6 @@ impl<R, C> Basic<R, C>
         ).unwrap();
 
         Basic{
-            encoder: encoder,
             pso: pso,
         }
     }

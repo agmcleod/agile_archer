@@ -83,7 +83,7 @@ pub struct TileMapPlane<R: gfx::Resources> {
 impl<R> TileMapPlane<R>
     where R: gfx::Resources
 {
-    pub fn new<F>(factory: &mut F, tilemap: &tiled::Map, aspect_ratio: f32, target: &renderer::WindowTargets<R>) -> TileMapPlane<R>
+    pub fn new<F>(factory: &mut F, tilemap: &tiled::Map, target: &renderer::WindowTargets<R>) -> TileMapPlane<R>
         where F: gfx::Factory<R>
     {
         let half_width = (tilemap.width * tilemap.tile_width) / 2;
@@ -118,7 +118,7 @@ impl<R> TileMapPlane<R>
 
         let tileset = tilemap.tilesets.get(0).unwrap(); // working under the assumption i will only use one tileset
         let image = tileset.images.get(0).unwrap();
-        let tiles_texture = loader::gfx_load_texture(&image.source, factory);
+        let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), factory);
 
         let params = pipe::Data {
             vbuf: vbuf,
@@ -180,7 +180,7 @@ impl<R> TileMapPlane<R>
     }
 }
 
-fn populate_tilemap<R>(tilemap: &mut TileMap<R>, map_data: &tiled::Map)
+pub fn populate_tilemap<R>(tilemap: &mut TileMap<R>, map_data: &tiled::Map)
     where R: gfx::Resources
 {
     let layers = &map_data.layers;
@@ -205,7 +205,6 @@ fn populate_tilemap<R>(tilemap: &mut TileMap<R>, map_data: &tiled::Map)
 
 pub struct TileMap<R: gfx::Resources> {
     pub tiles: Vec<TileMapData>,
-    pso: gfx::PipelineState<R, pipe::Meta>,
     tilemap_plane: TileMapPlane<R>,
     tile_size: f32,
     tilemap_size: [usize; 2],
@@ -218,7 +217,7 @@ pub struct TileMap<R: gfx::Resources> {
 impl<R> TileMap<R>
     where R: gfx::Resources
 {
-    pub fn new<F>(map: &tiled::Map, factory: &mut F, aspect_ratio: f32, target: &renderer::WindowTargets<R>) -> TileMap<R>
+    pub fn new<F>(map: &tiled::Map, factory: &mut F, target: &renderer::WindowTargets<R>) -> TileMap<R>
         where F: gfx::Factory<R>
     {
         let mut tiles = Vec::with_capacity((map.width * map.height) as usize);
@@ -228,13 +227,8 @@ impl<R> TileMap<R>
 
         TileMap {
             tiles: tiles,
-            pso: factory.create_pipeline_simple(
-                include_bytes!("shaders/tilemap.glslv"),
-                include_bytes!("shaders/tilemap.glslf"),
-                pipe::new()
-            ).unwrap(),
             tilemap_plane: TileMapPlane::new(
-                factory, map, aspect_ratio, target
+                factory, map, target
             ),
             tile_size: map.tile_width as f32,
             tilemap_size: [map.width as usize, map.height as usize],
@@ -333,9 +327,6 @@ impl<R> TileMap<R>
 
 pub struct TileMapRenderer<'a, R: gfx::Resources> {
     projection: gfx::handle::Buffer<R, ProjectionStuff>,
-    tilemap_stuff: gfx::handle::Buffer<R, TilemapStuff>,
-    tilemap_data: gfx::handle::Buffer<R, TileMapData>,
-    tilesheet_sampler: gfx::handle::Sampler<R>,
     tilemap: &'a TileMap<R>,
     pso: gfx::PipelineState<R, pipe::Meta>,
 }
@@ -343,30 +334,20 @@ pub struct TileMapRenderer<'a, R: gfx::Resources> {
 impl <'a, R>TileMapRenderer<'a, R>
     where R: gfx::Resources
 {
-    pub fn new<F>(tilemap: &TileMap<R>, factory: &mut F) -> TileMapRenderer<'a, R>
+    pub fn new<F>(tilemap: &'a TileMap<R>, factory: &mut F) -> TileMapRenderer<'a, R>
         where F: gfx::Factory<R>
     {
-        let sampler = factory.create_sampler(
-            gfx::texture::SamplerInfo::new(
-                gfx::texture::FilterMethod::Scale,
-                gfx::texture::WrapMode::Clamp
-            )
-        );
-
         let vert_src = include_bytes!("shaders/tilemap.glslv");
         let frag_src = include_bytes!("shaders/tilemap.glslf");
 
         TileMapRenderer {
             projection: factory.create_constant_buffer(1),
-            tilemap_stuff: factory.create_constant_buffer(1),
-            tilemap_data: factory.create_constant_buffer(1),
-            tilesheet_sampler: sampler,
             tilemap: tilemap,
             pso: factory.create_pipeline_simple(vert_src, frag_src, pipe::new()).unwrap(),
         }
     }
 
-    fn render<C>(&self, encoder: &mut gfx::Encoder<R, C>, world: &World)
+    pub fn render<C>(&self, encoder: &mut gfx::Encoder<R, C>, world: &World)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
     {
 
