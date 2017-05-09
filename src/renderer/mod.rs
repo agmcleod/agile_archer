@@ -64,14 +64,6 @@ pub fn get_ortho() -> Matrix4<f32> {
     )
 }
 
-pub fn get_view(x: f32, y: f32) -> Matrix4<f32> {
-    Matrix4::look_at(
-        Point3::new(x, y, 800.0),
-        Point3::new(x, y, 0.0),
-        Vector3::unit_y(),
-    )
-}
-
 pub fn get_dimensions() -> [f32; 2] {
     [1024.0, 768.0]
 }

@@ -8,7 +8,7 @@ use renderer;
 use loader;
 use specs::World;
 
-use cgmath::{SquareMatrix, Matrix4, Point3, Vector3};
+use cgmath::{SquareMatrix, Matrix4, Vector3};
 
 use gfx::traits::FactoryExt;
 use genmesh::{Vertices, Triangulate};
@@ -32,7 +32,6 @@ gfx_defines!{
 
     constant ProjectionStuff {
         model: [[f32; 4]; 4] = "u_Model",
-        view: [[f32; 4]; 4] = "u_View",
         proj: [[f32; 4]; 4] = "u_Proj",
     }
 
@@ -130,9 +129,6 @@ impl<R> TileMapPlane<R>
             out_depth: target.depth.clone(),
         };
 
-        // TODO: change the coords here
-        let view: Matrix4<f32> = renderer::get_view(0.0, 0.0);
-
         let mut map_data = Vec::with_capacity(total_size as usize);
         for _ in 0..total_size {
             map_data.push(TileMapData::new_empty());
@@ -143,7 +139,6 @@ impl<R> TileMapPlane<R>
             params: params,
             proj_stuff: ProjectionStuff {
                 model: Matrix4::identity().into(),
-                view: view.into(),
                 proj: renderer::get_ortho().into(),
             },
             proj_dirty: true,
@@ -167,6 +162,17 @@ impl<R> TileMapPlane<R>
         if self.tm_dirty {
             encoder.update_constant_buffer(&self.params.tilemap_cb, &self.tm_stuff);
         }
+    }
+
+    fn clear<C>(&self, encoder: &mut gfx::Encoder<R, C>) where C: gfx::CommandBuffer<R> {
+        encoder.clear(&self.params.out_color,
+            [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
+        encoder.clear_depth(&self.params.out_depth, 1.0);
+    }
+
+    pub fn update_view(&mut self, view: &Matrix4<f32>) {
+        self.proj_stuff.proj = view.clone().into();
+        self.proj_dirty = true;
     }
 
     pub fn update_x_offset(&mut self, amt: f32) {
@@ -331,19 +337,14 @@ impl<R> TileMapRenderer<R>
         self.tiles[idx] = TileMapData::new(data);
     }
 
-    pub fn render<C>(&self, encoder: &mut gfx::Encoder<R, C>, world: &World)
+    pub fn render<C>(&mut self, encoder: &mut gfx::Encoder<R, C>, world: &World)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
     {
 
         let camera = world.read_resource::<components::Camera>().wait();
-        encoder.update_constant_buffer(&self.projection, &ProjectionStuff {
-            // use identity matrix until i figure out how i want to do map transforms
-            model: [[1f32, 0f32, 0f32, 0f32], [0f32, 1f32, 0f32, 0f32], [0f32, 0f32, 1f32, 0f32], [0f32, 0f32, 0f32, 1f32]],
-            proj: (*camera).0.into(),
-            view: renderer::get_view(0.0, 0.0).into(),
-        });
-
+        self.tilemap_plane.update_view(&(*camera).0.into());
         self.tilemap_plane.prepare_buffers(encoder, self.focus_dirty);
+        self.tilemap_plane.clear(encoder);
 
         encoder.draw(&self.tilemap_plane.slice, &self.pso, &self.tilemap_plane.params);
     }
