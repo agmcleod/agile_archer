@@ -61,6 +61,8 @@ fn main() {
 
         tilemap_renderer.render(&mut encoder, planner.mut_world());
 
+        encoder.flush(&mut device);
+
         window.swap_buffers().unwrap();
         device.cleanup();
     }
