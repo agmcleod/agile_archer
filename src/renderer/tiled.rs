@@ -85,33 +85,47 @@ impl<R> TileMapPlane<R>
     pub fn new<F>(factory: &mut F, tilemap: &tiled::Map, target: &renderer::WindowTargets<R>) -> TileMapPlane<R>
         where F: gfx::Factory<R>
     {
-        let half_width = (tilemap.width * tilemap.tile_width) / 2;
-        let half_height = (tilemap.height * tilemap.tile_height) / 2;
-
         let total_size = tilemap.width * tilemap.height;
+        let mut vertex_data: Vec<VertexData> = Vec::new();
+        let mut index_data: Vec<u32> = Vec::new();
+        let layer = &tilemap.layers.get(0).unwrap();
 
-        let plane = Plane::subdivide(tilemap.width as usize, tilemap.height as usize);
+        let mut index = 0u32;
+        for (row, cols) in layer.tiles.iter().enumerate() {
+            for col in cols {
+                if *col != 0 {
+                    let x = *col as f32 * tilemap.tile_width as f32;
+                    let y = row as f32 * tilemap.tile_height as f32;
+                    let w = tilemap.tile_width as f32;
+                    let h = tilemap.tile_height as f32;
+                    vertex_data.push(VertexData{
+                        pos: [x, y, 0.0],
+                        buf_pos: [*col as f32, row as f32],
+                    });
+                    vertex_data.push(VertexData{
+                        pos: [x + w, y, 0.0],
+                        buf_pos: [*col as f32, row as f32],
+                    });
+                    vertex_data.push(VertexData{
+                        pos: [x + w, y + h, 0.0],
+                        buf_pos: [*col as f32, row as f32],
+                    });
+                    vertex_data.push(VertexData{
+                        pos: [x, y + h, 0.0],
+                        buf_pos: [*col as f32, row as f32],
+                    });
 
-        let vertex_data: Vec<VertexData> = plane.shared_vertex_iter().map(|(raw_x, raw_y)| {
-            let vertex_x = half_width as f32 * raw_x;
-            let vertex_y = half_height as f32 * raw_y;
+                    index_data.push(index);
+                    index_data.push(index + 1);
+                    index_data.push(index + 2);
+                    index_data.push(index + 2);
+                    index_data.push(index + 3);
+                    index_data.push(index);
 
-            let u_pos = (1.0 + raw_x) / 2.0;
-            let v_pos = (1.0 + raw_y) / 2.0;
-            let tilemap_x = (u_pos * tilemap.width as f32).floor();
-            let tilemap_y = (v_pos * tilemap.height as f32).floor();
-
-            VertexData {
-                pos: [vertex_x, vertex_y, 0.0],
-                buf_pos: [tilemap_x as f32, tilemap_y as f32]
+                    index += 4;
+                }
             }
-        }).collect();
-
-        let index_data: Vec<u32> = plane.indexed_polygon_iter()
-            .triangulate()
-            .vertices()
-            .map(|i| i as u32)
-            .collect();
+        }
 
         let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&vertex_data, &index_data[..]);
 
