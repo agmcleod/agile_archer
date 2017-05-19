@@ -19,15 +19,13 @@ uniform b_PsLocals {
 uniform sampler2D t_TileSheet;
 
 void main() {
-    // apply offset to v_BufPos
-    vec2 offset_bufpos = v_BufPos + (u_TileOffsets / u_WorldSize.zz);
     // base coordinates for the charmap tile of the "nearest" (left/down) vertex.
-    vec2 bufTileCoords = floor(offset_bufpos);
+    vec2 bufTileCoords = floor(v_BufPos);
 
     // "raw" offset, expressed as 0.0..1.0, for the offset position of the current
     // fragment
     // -- need to flip the y coords
-    vec2 rawUvOffsets = vec2(offset_bufpos.x - bufTileCoords.x, 1.0 - (offset_bufpos.y - bufTileCoords.y));
+    vec2 rawUvOffsets = vec2(v_BufPos.x - bufTileCoords.x, (v_BufPos.y - bufTileCoords.y));
 
     vec4 texData;
     if (bufTileCoords.x >= 0.0 && bufTileCoords.x < u_WorldSize.x && bufTileCoords.y >= 0.0 && bufTileCoords.y < u_WorldSize.y) {

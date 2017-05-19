@@ -14,6 +14,7 @@ use gfx::traits::FactoryExt;
 use genmesh::{Vertices, Triangulate};
 use genmesh::generators::{Plane, SharedVertex, IndexedPolygon};
 
+use tiled::{Tileset};
 use components;
 
 // this is a value based on a max buffer size (and hence tilemap size) of 64x64
@@ -92,27 +93,27 @@ impl<R> TileMapPlane<R>
 
         let mut index = 0u32;
         for (row, cols) in layer.tiles.iter().enumerate() {
-            for col in cols {
-                if *col != 0 {
-                    let x = *col as f32 * tilemap.tile_width as f32;
+            for (col, cell) in cols.iter().enumerate() {
+                if *cell != 0 {
+                    let x = col as f32 * tilemap.tile_width as f32;
                     let y = row as f32 * tilemap.tile_height as f32;
                     let w = tilemap.tile_width as f32;
                     let h = tilemap.tile_height as f32;
                     vertex_data.push(VertexData{
                         pos: [x, y, 0.0],
-                        buf_pos: [*col as f32, row as f32],
+                        buf_pos: [col as f32, row as f32],
                     });
                     vertex_data.push(VertexData{
                         pos: [x + w, y, 0.0],
-                        buf_pos: [*col as f32, row as f32],
+                        buf_pos: [col as f32, row as f32],
                     });
                     vertex_data.push(VertexData{
                         pos: [x + w, y + h, 0.0],
-                        buf_pos: [*col as f32, row as f32],
+                        buf_pos: [col as f32, row as f32],
                     });
                     vertex_data.push(VertexData{
                         pos: [x, y + h, 0.0],
-                        buf_pos: [*col as f32, row as f32],
+                        buf_pos: [col as f32, row as f32],
                     });
 
                     index_data.push(index);
@@ -158,7 +159,12 @@ impl<R> TileMapPlane<R>
             proj_dirty: true,
             tm_stuff: TilemapStuff{
                 world_size: [tilemap.width as f32, tilemap.height as f32, tilemap.tile_width as f32, 0.0],
-                tilesheet_size: [tileset.tile_width as f32, tileset.tile_height as f32, tileset.images[0].width as f32, tileset.images[0].height as f32],
+                tilesheet_size: [
+                    (tileset.images[0].width / tileset.tile_width as i32) as f32,
+                    (tileset.images[0].height / tileset.tile_height as i32) as f32,
+                    tileset.images[0].width as f32,
+                    tileset.images[0].height as f32
+                ],
                 offsets: [0.0, 0.0],
             },
             tm_dirty: true,
@@ -206,14 +212,17 @@ pub fn populate_tilemap<R>(tilemap: &mut TileMapRenderer<R>, map_data: &tiled::M
     let layers = &map_data.layers;
     for layer in layers {
         for (row, cols) in layer.tiles.iter().enumerate() {
-            for col in cols {
-                if *col != 0 {
+            for (col, cell) in cols.iter().enumerate() {
+                if *cell != 0 {
                     for tileset in map_data.tilesets.iter() {
                         let image = &tileset.images[0];
-                        if tileset.first_gid as usize + tileset.tiles.len() - 1 <= *col as usize {
-                            let x = (*col as f32 * tilemap.tile_size) % image.width as f32;
-                            let y = (row as f32 * tilemap.tile_size) % image.height as f32;
-                            tilemap.set_tile(*col as usize, row, [x, y, 0.0, 0.0]);
+                        // just handling a single image for now
+                        if tileset.first_gid as usize + tileset.tiles.len() - 1 <= *cell as usize {
+                            let iw = image.width as u32;
+                            let tiles_wide = iw / tileset.tile_width as u32;
+                            let x = (*cell as u32 - 1u32) % tiles_wide;
+                            let y = (*cell as u32 - 1u32) / tiles_wide;
+                            tilemap.set_tile(col as usize, row, [x as f32, y  as f32, 0.0, 0.0]);
                             break
                         }
                     }

@@ -55,11 +55,9 @@ impl<R> Basic<R>
 
 pub fn get_ortho() -> Matrix4<f32> {
     let dim = get_dimensions();
-    let hw = dim[0] / 2.0;
-    let hh = dim[1] / 2.0;
     cgmath::ortho(
-        -hw, hw,
-        -hh, hh,
+        0.0, dim[0],
+        0.0, dim[1],
         0.0, 1.0,
     )
 }
