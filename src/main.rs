@@ -19,6 +19,7 @@ mod loader;
 mod components;
 
 use renderer::{ColorFormat, DepthFormat};
+use renderer::tiled::TileMapPlane;
 
 fn main() {
     let dim = renderer::get_dimensions();
@@ -46,8 +47,13 @@ fn main() {
         specs::Planner::<()>::new(world)
     };
 
-    let mut tilemap_renderer = renderer::tiled::TileMapRenderer::new(&map, &mut factory, &target);
-    tilemap_renderer.set_focus([0, 0]);
+    let tile_map_render_data: Vec<TileMapPlane> = map.layers.iter().map(|layer| {
+        TileMapPlane::new(&map, &layer)
+    }).collect();
+
+    let tileset = map.tilesets.get(0).unwrap(); // working under the assumption i will only use one tileset
+    let image = tileset.images.get(0).unwrap();
+    let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
     'main: loop {
         for event in window.poll_events() {
@@ -58,7 +64,9 @@ fn main() {
             }
         }
 
-        tilemap_renderer.render(&mut encoder, planner.mut_world());
+        for tile_map_plane in &tile_map_render_data {
+
+        }
 
         encoder.flush(&mut device);
 

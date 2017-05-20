@@ -1,7 +1,7 @@
 extern crate gfx;
 extern crate cgmath;
 
-use cgmath::{Matrix4, Point3, Vector3};
+use cgmath::{SquareMatrix, Matrix4, Point3, Vector3};
 use gfx::traits::FactoryExt;
 
 pub mod tiled;
@@ -17,8 +17,14 @@ gfx_defines!{
         uv: [f32; 2] = "a_Uv",
     }
 
+    constant Projection {
+        model: [[f32; 4]; 4] = "u_Model",
+        proj: [[f32; 4]; 4] = "u_Proj",
+    }
+
     pipeline pipe {
         vbuf: gfx::VertexBuffer<Vertex> = (),
+        projection_cb: gfx::ConstantBuffer<Projection> = "b_Projection",
         tex: gfx::TextureSampler<[f32; 4]> = "t_Texture",
         out: gfx::RenderTarget<ColorFormat> = "Target0",
     }
@@ -31,6 +37,7 @@ pub struct WindowTargets<R: gfx::Resources> {
 
 pub struct Basic<R: gfx::Resources> {
     pso: gfx::PipelineState<R, pipe::Meta>,
+    projection: Projection,
 }
 
 impl<R> Basic<R>
@@ -49,6 +56,10 @@ impl<R> Basic<R>
 
         Basic{
             pso: pso,
+            projection: Projection{
+                model: Matrix4::identity().into(),
+                proj: get_ortho().into(),
+            }
         }
     }
 }
