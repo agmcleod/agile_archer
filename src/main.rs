@@ -47,7 +47,6 @@ fn main() {
     };
 
     let mut tilemap_renderer = renderer::tiled::TileMapRenderer::new(&map, &mut factory, &target);
-    renderer::tiled::populate_tilemap(&mut tilemap_renderer, &map);
     tilemap_renderer.set_focus([0, 0]);
 
     'main: loop {

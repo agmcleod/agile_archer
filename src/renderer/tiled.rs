@@ -91,6 +91,11 @@ impl<R> TileMapPlane<R>
         let mut vertex_data: Vec<VertexData> = Vec::new();
         let mut index_data: Vec<u32> = Vec::new();
 
+        let mut tiles = Vec::with_capacity((tilemap.width * tilemap.height) as usize);
+        for _ in 0..(tilemap.width * tilemap.height) {
+            tiles.push(TileMapData::new_empty());
+        }
+
         let mut index = 0u32;
         for (row, cols) in layer.tiles.iter().enumerate() {
             for (col, cell) in cols.iter().enumerate() {
@@ -124,6 +129,21 @@ impl<R> TileMapPlane<R>
                     index_data.push(index);
 
                     index += 4;
+
+                    // build out texture coord data
+                    for tileset in tilemap.tilesets.iter() {
+                        let image = &tileset.images[0];
+                        // just handling a single image for now
+                        if tileset.first_gid as usize + tileset.tiles.len() - 1 <= *cell as usize {
+                            let iw = image.width as u32;
+                            let tiles_wide = iw / tileset.tile_width as u32;
+                            let x = (*cell as u32 - 1u32) % tiles_wide;
+                            let y = (*cell as u32 - 1u32) / tiles_wide;
+                            let idx = (y * tilemap.width) + x;
+                            tiles[idx as usize] = TileMapData::new([x as f32, y  as f32, 0.0, 0.0]);
+                            break
+                        }
+                    }
                 }
             }
         }
@@ -147,31 +167,6 @@ impl<R> TileMapPlane<R>
         let mut map_data = Vec::with_capacity(total_size as usize);
         for _ in 0..total_size {
             map_data.push(TileMapData::new_empty());
-        }
-
-        let mut tiles = Vec::with_capacity((tilemap.width * tilemap.height) as usize);
-        for _ in 0..(tilemap.width * tilemap.height) {
-            tiles.push(TileMapData::new_empty());
-        }
-
-        for (row, cols) in layer.tiles.iter().enumerate() {
-            for (col, cell) in cols.iter().enumerate() {
-                if *cell != 0 {
-                    for tileset in tilemap.tilesets.iter() {
-                        let image = &tileset.images[0];
-                        // just handling a single image for now
-                        if tileset.first_gid as usize + tileset.tiles.len() - 1 <= *cell as usize {
-                            let iw = image.width as u32;
-                            let tiles_wide = iw / tileset.tile_width as u32;
-                            let x = (*cell as u32 - 1u32) % tiles_wide;
-                            let y = (*cell as u32 - 1u32) / tiles_wide;
-                            let idx = (y * tilemap.width) + x;
-                            tiles[idx as usize] = TileMapData::new([x as f32, y  as f32, 0.0, 0.0]);
-                            break
-                        }
-                    }
-                }
-            }
         }
 
         TileMapPlane{
@@ -226,15 +221,6 @@ impl<R> TileMapPlane<R>
     }
 }
 
-pub fn populate_tilemap<R>(tilemap: &mut TileMapRenderer<R>, map_data: &tiled::Map)
-    where R: gfx::Resources
-{
-    let layers = &map_data.layers;
-    for layer in layers {
-
-    }
-}
-
 pub struct TileMapRenderer<R: gfx::Resources> {
     tilemap_planes: Vec<TileMapPlane<R>>,
     tile_size: f32,
@@ -256,7 +242,9 @@ impl<R> TileMapRenderer<R>
         let vert_src = include_bytes!("shaders/tilemap.glslv");
         let frag_src = include_bytes!("shaders/tilemap.glslf");
 
+        let mut i = 1;
         let tilemap_planes = map.layers.iter().map(|layer| {
+            i += 1;
             TileMapPlane::new(
                 factory, map, layer, target
             )
@@ -307,7 +295,14 @@ impl<R> TileMapRenderer<R>
             encoder.clear(&params.out_color, [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
             encoder.clear_depth(&params.out_depth, 1.0);
         }
+        let mut i = 0;
         for tilemap_plane in self.tilemap_planes.iter_mut() {
+            if i == 0 {
+                i += 1;
+                continue
+            }
+            i += 1;
+
             tilemap_plane.update_view(&(*camera).0.into());
             tilemap_plane.prepare_buffers(encoder, self.focus_dirty);
             encoder.draw(&tilemap_plane.slice, &self.pso, &tilemap_plane.params);
