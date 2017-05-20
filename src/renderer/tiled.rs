@@ -72,6 +72,7 @@ impl TileMapData {
 
 pub struct TileMapPlane<R: gfx::Resources> {
     pub params: pipe::Data<R>,
+    pub texture_data: Vec<TileMapData>,
     pub slice: gfx::Slice<R>,
     proj_stuff: ProjectionStuff,
     proj_dirty: bool,
@@ -83,13 +84,12 @@ pub struct TileMapPlane<R: gfx::Resources> {
 impl<R> TileMapPlane<R>
     where R: gfx::Resources
 {
-    pub fn new<F>(factory: &mut F, tilemap: &tiled::Map, target: &renderer::WindowTargets<R>) -> TileMapPlane<R>
+    pub fn new<F>(factory: &mut F, tilemap: &tiled::Map, layer: &tiled::Layer, target: &renderer::WindowTargets<R>) -> TileMapPlane<R>
         where F: gfx::Factory<R>
     {
         let total_size = tilemap.width * tilemap.height;
         let mut vertex_data: Vec<VertexData> = Vec::new();
         let mut index_data: Vec<u32> = Vec::new();
-        let layer = &tilemap.layers.get(0).unwrap();
 
         let mut index = 0u32;
         for (row, cols) in layer.tiles.iter().enumerate() {
@@ -149,7 +149,33 @@ impl<R> TileMapPlane<R>
             map_data.push(TileMapData::new_empty());
         }
 
+        let mut tiles = Vec::with_capacity((tilemap.width * tilemap.height) as usize);
+        for _ in 0..(tilemap.width * tilemap.height) {
+            tiles.push(TileMapData::new_empty());
+        }
+
+        for (row, cols) in layer.tiles.iter().enumerate() {
+            for (col, cell) in cols.iter().enumerate() {
+                if *cell != 0 {
+                    for tileset in tilemap.tilesets.iter() {
+                        let image = &tileset.images[0];
+                        // just handling a single image for now
+                        if tileset.first_gid as usize + tileset.tiles.len() - 1 <= *cell as usize {
+                            let iw = image.width as u32;
+                            let tiles_wide = iw / tileset.tile_width as u32;
+                            let x = (*cell as u32 - 1u32) % tiles_wide;
+                            let y = (*cell as u32 - 1u32) / tiles_wide;
+                            let idx = (y * tilemap.width) + x;
+                            tiles[idx as usize] = TileMapData::new([x as f32, y  as f32, 0.0, 0.0]);
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
         TileMapPlane{
+            texture_data: tiles,
             slice: slice,
             params: params,
             proj_stuff: ProjectionStuff {
@@ -184,12 +210,6 @@ impl<R> TileMapPlane<R>
         }
     }
 
-    fn clear<C>(&self, encoder: &mut gfx::Encoder<R, C>) where C: gfx::CommandBuffer<R> {
-        encoder.clear(&self.params.out_color,
-            [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
-        encoder.clear_depth(&self.params.out_depth, 1.0);
-    }
-
     pub fn update_view(&mut self, view: &Matrix4<f32>) {
         self.proj_stuff.proj = view.clone().into();
         self.proj_dirty = true;
@@ -211,30 +231,12 @@ pub fn populate_tilemap<R>(tilemap: &mut TileMapRenderer<R>, map_data: &tiled::M
 {
     let layers = &map_data.layers;
     for layer in layers {
-        for (row, cols) in layer.tiles.iter().enumerate() {
-            for (col, cell) in cols.iter().enumerate() {
-                if *cell != 0 {
-                    for tileset in map_data.tilesets.iter() {
-                        let image = &tileset.images[0];
-                        // just handling a single image for now
-                        if tileset.first_gid as usize + tileset.tiles.len() - 1 <= *cell as usize {
-                            let iw = image.width as u32;
-                            let tiles_wide = iw / tileset.tile_width as u32;
-                            let x = (*cell as u32 - 1u32) % tiles_wide;
-                            let y = (*cell as u32 - 1u32) / tiles_wide;
-                            tilemap.set_tile(col as usize, row, [x as f32, y  as f32, 0.0, 0.0]);
-                            break
-                        }
-                    }
-                }
-            }
-        }
+
     }
 }
 
 pub struct TileMapRenderer<R: gfx::Resources> {
-    pub tiles: Vec<TileMapData>,
-    tilemap_plane: TileMapPlane<R>,
+    tilemap_planes: Vec<TileMapPlane<R>>,
     tile_size: f32,
     tilemap_size: [usize; 2],
     charmap_size: [usize; 2],
@@ -251,19 +253,17 @@ impl<R> TileMapRenderer<R>
     pub fn new<F>(map: &tiled::Map, factory: &mut F, target: &renderer::WindowTargets<R>) -> TileMapRenderer<R>
         where F: gfx::Factory<R>
     {
-        let mut tiles = Vec::with_capacity((map.width * map.height) as usize);
-        for _ in 0..(map.width * map.height) {
-            tiles.push(TileMapData::new_empty());
-        }
-
         let vert_src = include_bytes!("shaders/tilemap.glslv");
         let frag_src = include_bytes!("shaders/tilemap.glslf");
 
+        let tilemap_planes = map.layers.iter().map(|layer| {
+            TileMapPlane::new(
+                factory, map, layer, target
+            )
+        }).collect::<Vec<TileMapPlane<R>>>();
+
         TileMapRenderer {
-            tiles: tiles,
-            tilemap_plane: TileMapPlane::new(
-                factory, map, target
-            ),
+            tilemap_planes: tilemap_planes,
             tile_size: map.tile_width as f32,
             tilemap_size: [map.width as usize, map.height as usize],
             charmap_size: [map.width as usize, map.height as usize],
@@ -284,7 +284,9 @@ impl<R> TileMapRenderer<R>
                 for xpos in self.focus_coords[0] .. self.focus_coords[0]+self.charmap_size[0] {
                     let tile_idx = (ypos * self.tilemap_size[0]) + xpos;
                     let charmap_idx = (charmap_ypos * self.charmap_size[0]) + charmap_xpos;
-                    self.tilemap_plane.data[charmap_idx] = self.tiles[tile_idx];
+                    for tilemap_plane in self.tilemap_planes.iter_mut() {
+                        tilemap_plane.data[charmap_idx] = tilemap_plane.texture_data[tile_idx];
+                    }
                     charmap_xpos += 1;
                 }
                 charmap_ypos += 1;
@@ -295,80 +297,20 @@ impl<R> TileMapRenderer<R>
         }
     }
 
-    pub fn apply_x_offset(&mut self, offset_amt: f32) {
-        let mut new_offset = self.tilemap_plane.tm_stuff.offsets[0] + offset_amt;
-        let curr_focus = self.focus_coords;
-        let new_x = if new_offset < 0.0 {
-            // move down
-            if self.focus_coords[0] == 0 {
-                new_offset = 0.0;
-                0
-            } else {
-                new_offset = self.tile_size + new_offset as f32;
-                self.focus_coords[0] - 1
-            }
-        } else if self.focus_coords[0] == self.limit_coords[0] {
-            // at top, no more offset
-            new_offset = 0.0;
-            self.focus_coords[0]
-        } else if new_offset >= self.tile_size {
-            new_offset = new_offset - self.tile_size as f32;
-            self.focus_coords[0] + 1
-        } else {
-            // no move
-            self.focus_coords[0]
-        };
-        if new_x != self.focus_coords[0] {
-            self.set_focus([new_x, curr_focus[1]]);
-        }
-        self.tilemap_plane.update_x_offset(new_offset);
-    }
-    pub fn apply_y_offset(&mut self, offset_amt: f32) {
-        let mut new_offset = self.tilemap_plane.tm_stuff.offsets[1] + offset_amt;
-        let curr_focus = self.focus_coords;
-        let new_y = if new_offset < 0.0 {
-            // move down
-            if self.focus_coords[1] == 0 {
-                new_offset = 0.0;
-                0
-            } else {
-                new_offset = self.tile_size + new_offset as f32;
-                self.focus_coords[1] - 1
-            }
-        } else if self.focus_coords[1] == (self.tilemap_size[1] - self.charmap_size[1]) {
-            // at top, no more offset
-            new_offset = 0.0;
-            self.focus_coords[1]
-        } else if new_offset >= self.tile_size {
-            new_offset = new_offset - self.tile_size as f32;
-            self.focus_coords[1] + 1
-        } else {
-            // no move
-            self.focus_coords[1]
-        };
-        if new_y != self.focus_coords[1] {
-            self.set_focus([curr_focus[0], new_y]);
-        }
-        self.tilemap_plane.update_y_offset(new_offset);
-    }
-
-    fn calc_idx(&self, xpos: usize, ypos: usize) -> usize {
-        (ypos * self.tilemap_size[0]) + xpos
-    }
-    pub fn set_tile(&mut self, xpos: usize, ypos: usize, data: [f32; 4]) {
-        let idx = self.calc_idx(xpos, ypos);
-        self.tiles[idx] = TileMapData::new(data);
-    }
-
     pub fn render<C>(&mut self, encoder: &mut gfx::Encoder<R, C>, world: &World)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
     {
 
         let camera = world.read_resource::<components::Camera>().wait();
-        self.tilemap_plane.update_view(&(*camera).0.into());
-        self.tilemap_plane.prepare_buffers(encoder, self.focus_dirty);
-        self.tilemap_plane.clear(encoder);
-
-        encoder.draw(&self.tilemap_plane.slice, &self.pso, &self.tilemap_plane.params);
+        {
+            let params = &self.tilemap_planes[0].params;
+            encoder.clear(&params.out_color, [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
+            encoder.clear_depth(&params.out_depth, 1.0);
+        }
+        for tilemap_plane in self.tilemap_planes.iter_mut() {
+            tilemap_plane.update_view(&(*camera).0.into());
+            tilemap_plane.prepare_buffers(encoder, self.focus_dirty);
+            encoder.draw(&tilemap_plane.slice, &self.pso, &tilemap_plane.params);
+        }
     }
 }
