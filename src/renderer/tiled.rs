@@ -23,7 +23,6 @@ pub struct TileMapPlane {
 
 impl TileMapPlane {
     pub fn new(tilemap: &tiled::Map, layer: &tiled::Layer) -> TileMapPlane {
-        let total_size = tilemap.width * tilemap.height;
         let mut vertex_data: Vec<VertexData> = Vec::new();
         let mut index_data: Vec<u32> = Vec::new();
 
@@ -32,7 +31,7 @@ impl TileMapPlane {
             for (col, cell) in cols.iter().enumerate() {
                 if *cell != 0 {
                     let x = col as f32 * tilemap.tile_width as f32;
-                    let y = row as f32 * tilemap.tile_height as f32;
+                    let y = (tilemap.tile_height * tilemap.height) as f32 - (row as f32 * tilemap.tile_height as f32);
                     let w = tilemap.tile_width as f32;
                     let h = tilemap.tile_height as f32;
                     vertex_data.push(VertexData{
@@ -70,16 +69,19 @@ impl TileMapPlane {
                             let tiles_high = ih / tileset.tile_width as u32;
                             let tile_width_uv = tileset.tile_width as f32 / iw as f32;
                             let tile_height_uv = tileset.tile_height as f32 / ih as f32;
-                            let x = (*cell as u32 - 1u32) % tiles_wide;
-                            let y = (*cell as u32 - 1u32) / tiles_wide;
-                            vertex_data[index as usize].uv[0] = x as f32 / tiles_wide as f32;
-                            vertex_data[index as usize].uv[1] = y as f32 / tiles_wide as f32;
-                            vertex_data[index as usize + 1].uv[0] = x as f32 / tiles_wide as f32 + tile_width_uv;
-                            vertex_data[index as usize + 1].uv[1] = y as f32 / tiles_wide as f32;
-                            vertex_data[index as usize + 2].uv[0] = x as f32 / tiles_wide as f32 + tile_width_uv;
-                            vertex_data[index as usize + 2].uv[1] = y as f32 / tiles_wide as f32 + tile_height_uv;
-                            vertex_data[index as usize + 3].uv[0] = x as f32 / tiles_wide as f32;
-                            vertex_data[index as usize + 3].uv[1] = y as f32 / tiles_wide as f32 + tile_height_uv;
+                            let x = ((*cell as u32 - 1u32) % tiles_wide) as f32;
+                            let y = ((*cell as u32 - 1u32) / tiles_wide) as f32;
+                            let i = index as usize;
+                            let tiles_wide = tiles_wide as f32;
+                            let tiles_high = tiles_high as f32;
+                            vertex_data[i].uv[0] = x / tiles_wide;
+                            vertex_data[i].uv[1] = y / tiles_high + tile_height_uv;
+                            vertex_data[i + 1].uv[0] = x / tiles_wide + tile_width_uv;
+                            vertex_data[i + 1].uv[1] = y / tiles_high + tile_height_uv;
+                            vertex_data[i + 2].uv[0] = x / tiles_wide + tile_width_uv;
+                            vertex_data[i + 2].uv[1] = y / tiles_high;
+                            vertex_data[i + 3].uv[0] = x / tiles_wide;
+                            vertex_data[i + 3].uv[1] = y / tiles_high;
                             break
                         }
                     }
