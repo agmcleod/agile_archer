@@ -35,11 +35,12 @@ fn main() {
     let map_file = File::open(&Path::new("./resources/map.tmx")).unwrap();
     let map = parse(map_file).unwrap();
 
-    let basic = renderer::Basic::new(&mut factory);
     let target = renderer::WindowTargets{
         color: main_color,
         depth: main_depth,
     };
+
+    let mut basic = renderer::Basic::new(&mut factory, target);
 
     let mut planner = {
         let mut world = World::new();
@@ -64,9 +65,7 @@ fn main() {
             }
         }
 
-        for tile_map_plane in &tile_map_render_data {
-
-        }
+        basic.render_map(&mut encoder, planner.mut_world(), &tile_map_render_data, &tiles_texture, &mut factory);
 
         encoder.flush(&mut device);
 

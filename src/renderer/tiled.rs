@@ -12,8 +12,8 @@ use genmesh::generators::{SharedVertex, IndexedPolygon};
 use tiled::{Tileset};
 
 pub struct VertexData {
-    pos: [f32; 2],
-    uv: [f32; 2],
+    pub pos: [f32; 2],
+    pub uv: [f32; 2],
 }
 
 pub struct TileMapPlane {
