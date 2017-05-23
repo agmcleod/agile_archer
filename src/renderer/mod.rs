@@ -116,5 +116,5 @@ pub fn get_ortho() -> Matrix4<f32> {
 }
 
 pub fn get_dimensions() -> [f32; 2] {
-    [1024.0, 768.0]
+    [960.0, 640.0]
 }
