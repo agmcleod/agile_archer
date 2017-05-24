@@ -13,10 +13,13 @@ use specs::World;
 use std::path::Path;
 use std::fs::File;
 use tiled::parse;
+use glutin::{ElementState, VirtualKeyCode};
 
 mod renderer;
 mod loader;
 mod components;
+
+use components::{Camera, Input};
 
 use renderer::{ColorFormat, DepthFormat};
 use renderer::tiled::TileMapPlane;
@@ -44,7 +47,8 @@ fn main() {
 
     let mut planner = {
         let mut world = World::new();
-        world.add_resource::<components::Camera>(components::Camera(renderer::get_ortho()));
+        world.add_resource::<Camera>(Camera(renderer::get_ortho()));
+        world.add_resource::<Input>(Input::new(vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
         specs::Planner::<()>::new(world)
     };
 
@@ -59,8 +63,18 @@ fn main() {
     'main: loop {
         for event in window.poll_events() {
             match event {
-                glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) |
-                glutin::Event::Closed => break 'main,
+                glutin::Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) | glutin::Event::Closed => break 'main,
+                glutin::Event::KeyboardInput(key_state, _, key) => {
+                    let world = planner.mut_world();
+                    let mut input = world.write_resource::<Input>().wait();
+                    let key = key.unwrap();
+                    if input.pressed_keys.contains_key(&key) {
+                        match key_state {
+                            ElementState::Pressed => input.pressed_keys.insert(key, true),
+                            ElementState::Released => input.pressed_keys.insert(key, false),
+                        };
+                    }
+                },
                 _ => {}
             }
         }

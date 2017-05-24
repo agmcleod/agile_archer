@@ -68,6 +68,10 @@ impl<R> Basic<R>
         }
     }
 
+    pub fn render<C, F>(&mut self, world: &World) {
+
+    }
+
     pub fn render_map<C, F>(&mut self,
         encoder: &mut gfx::Encoder<R, C>,
         world: &World,
@@ -78,10 +82,8 @@ impl<R> Basic<R>
     {
 
         let camera = world.read_resource::<components::Camera>().wait();
-        {
-            encoder.clear(&self.target.color, [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
-            encoder.clear_depth(&self.target.depth, 1.0);
-        }
+        encoder.clear(&self.target.color, [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
+        encoder.clear_depth(&self.target.depth, 1.0);
 
         for tilemap_plane in tilemap_planes.iter() {
             let data: Vec<Vertex> = tilemap_plane.data.iter().map(|quad| {
