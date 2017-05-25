@@ -6,6 +6,9 @@ extern crate specs;
 extern crate cgmath;
 extern crate genmesh;
 extern crate tiled;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 use gfx::Device;
 use specs::World;
@@ -18,11 +21,14 @@ use glutin::{ElementState, VirtualKeyCode};
 mod renderer;
 mod loader;
 mod components;
+mod spritesheet;
 
-use components::{Camera, Input};
+use components::{Camera, Input, Player, Sprite, Transform};
 
 use renderer::{ColorFormat, DepthFormat};
 use renderer::tiled::TileMapPlane;
+
+use spritesheet::Spritesheet;
 
 fn main() {
     let dim = renderer::get_dimensions();
@@ -49,6 +55,10 @@ fn main() {
         let mut world = World::new();
         world.add_resource::<Camera>(Camera(renderer::get_ortho()));
         world.add_resource::<Input>(Input::new(vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
+        world.register::<Sprite>();
+        world.register::<Transform>();
+        world.register::<Player>();
+        world.create_now().with(Transform::new(0, 0, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png") }).with(Player{});
         specs::Planner::<()>::new(world)
     };
 
@@ -59,6 +69,11 @@ fn main() {
     let tileset = map.tilesets.get(0).unwrap(); // working under the assumption i will only use one tileset
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
+
+    let asset_text = loader::read_text_from_file("./resources/assets.json").unwrap();
+
+    let asset_data: Spritesheet = serde_json::from_str(asset_text.as_ref()).unwrap();
+    let asset_texture = loader::gfx_load_texture("./resources/assets.png", &mut factory);
 
     'main: loop {
         for event in window.poll_events() {

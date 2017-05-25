@@ -68,7 +68,9 @@ impl<R> Basic<R>
         }
     }
 
-    pub fn render<C, F>(&mut self, world: &World) {
+    pub fn render<C>(&mut self, encoder: &mut gfx::Encoder<R, C>)
+        where R: gfx::Resources, C: gfx::CommandBuffer<R>
+    {
 
     }
 
