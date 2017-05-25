@@ -31,7 +31,7 @@ impl TileMapPlane {
             for (col, cell) in cols.iter().enumerate() {
                 if *cell != 0 {
                     let x = col as f32 * tilemap.tile_width as f32;
-                    let y = (tilemap.tile_height * tilemap.height) as f32 - (row as f32 * tilemap.tile_height as f32);
+                    let y = (tilemap.tile_height * tilemap.height) as f32 - (row as f32 * tilemap.tile_height as f32) - tilemap.tile_height as f32;
                     let w = tilemap.tile_width as f32;
                     let h = tilemap.tile_height as f32;
                     vertex_data.push(VertexData{
