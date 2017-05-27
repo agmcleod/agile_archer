@@ -68,6 +68,10 @@ impl<R> Basic<R>
         }
     }
 
+    pub fn reset_transform(&mut self) {
+        self.projection.model = Matrix4::identity().into();
+    }
+
     pub fn render<C>(&mut self, encoder: &mut gfx::Encoder<R, C>)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
     {
@@ -107,7 +111,7 @@ impl<R> Basic<R>
             encoder.update_constant_buffer(&params.projection_cb, &self.projection);
             encoder.draw(&slice, &self.pso, &params);
         }
-}
+    }
 }
 
 pub fn get_ortho() -> Matrix4<f32> {
