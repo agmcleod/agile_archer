@@ -11,8 +11,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use gfx::Device;
-use specs::World;
-use specs::Join;
+use specs::{Gate, Join, World};
 
 use std::path::Path;
 use std::fs::File;
@@ -75,6 +74,8 @@ fn main() {
     let asset_data: Spritesheet = serde_json::from_str(asset_text.as_ref()).unwrap();
     let asset_texture = loader::gfx_load_texture("./resources/assets.png", &mut factory);
 
+
+
     'main: loop {
         for event in window.poll_events() {
             match event {
@@ -98,17 +99,13 @@ fn main() {
 
         basic.render_map(&mut encoder, planner.mut_world(), &tile_map_render_data, &tiles_texture, &mut factory);
 
-        planner.run_custom(move |arg| {
-            let (sprites, transforms) = arg.fetch(|w| {
-                (w.read::<Sprite>(), w.read::<Transform>())
-            });
+        let world = planner.mut_world();
+        let sprites = world.read::<Sprite>().pass();
+        let transforms = world.read::<Transform>().pass();
 
-            for (sprite, transform) in (&sprites, &transforms).join() {
-                basic.render(&mut encoder);
-            }
-        });
-
-        encoder.flush(&mut device);
+        for (sprite, transform) in (&sprites, &transforms).join() {
+            basic.render(&mut encoder);
+        }
 
         window.swap_buffers().unwrap();
         device.cleanup();
