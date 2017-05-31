@@ -70,8 +70,8 @@ fn main() {
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
-    let asset_text = loader::read_text_from_file("./resources/assets.json").unwrap();
-    let asset_data: Spritesheet = serde_json::from_str(asset_text.as_ref()).unwrap();
+    let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();
+    let spritesheet: Spritesheet = serde_json::from_str(asset_data.as_ref()).unwrap();
     let asset_texture = loader::gfx_load_texture("./resources/assets.png", &mut factory);
 
     'main: loop {
@@ -102,8 +102,10 @@ fn main() {
         let transforms = world.read::<Transform>().pass();
 
         for (sprite, transform) in (&sprites, &transforms).join() {
-            basic.render(&mut encoder, &transform, &sprite, &asset_data);
+            basic.render(&mut encoder, world, &mut factory, &transform, &sprite, &spritesheet, &asset_texture);
         }
+
+        encoder.flush(&mut device);
 
         window.swap_buffers().unwrap();
         device.cleanup();
