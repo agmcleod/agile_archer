@@ -58,11 +58,11 @@ fn main() {
         world.register::<Sprite>();
         world.register::<Transform>();
         world.register::<Player>();
-        world.create_now().with(Transform::new(0, 0, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png") }).with(Player{});
+        world.create_now().with(Transform::new(0, 64, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png") }).with(Player{});
         specs::Planner::<()>::new(world)
     };
 
-    let tile_map_render_data: Vec<TileMapPlane> = map.layers.iter().map(|layer| {
+    let tile_map_render_data: Vec<TileMapPlane> = map.layers.iter().filter(|layer| layer.name != "meta").map(|layer| {
         TileMapPlane::new(&map, &layer)
     }).collect();
 
