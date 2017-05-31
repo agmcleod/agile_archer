@@ -7,6 +7,7 @@ use cgmath::{SquareMatrix, Matrix4, Point3, Vector3};
 use gfx::traits::FactoryExt;
 
 use components;
+use spritesheet::{Frame, Spritesheet};
 pub mod tiled;
 
 pub use self::tiled::*;
@@ -72,10 +73,60 @@ impl<R> Basic<R>
         self.projection.model = Matrix4::identity().into();
     }
 
-    pub fn render<C>(&mut self, encoder: &mut gfx::Encoder<R, C>)
-        where R: gfx::Resources, C: gfx::CommandBuffer<R>
+    pub fn render<C, F>(
+        &mut self,
+        encoder: &mut gfx::Encoder<R, C>,
+        world: &World, factory: &mut F,
+        transform: &components::Transform,
+        sprite: &components::Sprite,
+        spritesheet: &Spritesheet,
+        texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>)
+        where R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>
     {
+        let camera = world.read_resource::<components::Camera>().wait();
+        let x = transform.pos.x as f32;
+        let y = transform.pos.y as f32;
+        let w = transform.size.x as f32;
+        let h = transform.size.x as f32;
 
+        let region = spritesheet.frames.iter().filter(|frame| frame.filename == sprite.frame_name).collect::<Vec<Frame>>()[0];
+        let sw = spritesheet.meta.size.w as f32;
+        let sh = spritesheet.meta.size.h as f32;
+        let tx = region.frame.x as f32 / sw;
+        let ty = region.frame.y as f32 / sh;
+        let tx2 = region.frame.x as f32 + region.frame.w as f32 / sw;
+        let ty2 = region.frame.y as f32 + region.frame.h as f32 / sh;
+
+        let data: Vec<Vertex> = vec![
+            Vertex{
+                pos: [x, y],
+                uv: [tx, ty2],
+            },
+            Vertex{
+                pos: [x + w, y],
+                uv: [tx2, ty2],
+            },
+            Vertex{
+                pos: [x + w, y + h],
+                uv: [tx2, ty],
+            },
+            Vertex{
+                pos: [x, y + h],
+                uv: [tx, ty],
+            }
+        ];
+
+        let index_data: Vec<u32> = vec![0, 1, 2, 2, 3, 0];
+        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&data, &index_data[..]);
+
+        let mut params = pipe::Data{
+            vbuf: vbuf,
+            projection_cb: factory.create_constant_buffer(1),
+            tex: (texture.clone(), factory.create_sampler_linear()),
+            out: self.target.color.clone(),
+        };
+
+        self.projection.proj = (*camera).0.into();
     }
 
     pub fn render_map<C, F>(&mut self,

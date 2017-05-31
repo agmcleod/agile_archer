@@ -74,8 +74,6 @@ fn main() {
     let asset_data: Spritesheet = serde_json::from_str(asset_text.as_ref()).unwrap();
     let asset_texture = loader::gfx_load_texture("./resources/assets.png", &mut factory);
 
-
-
     'main: loop {
         for event in window.poll_events() {
             match event {
@@ -104,7 +102,7 @@ fn main() {
         let transforms = world.read::<Transform>().pass();
 
         for (sprite, transform) in (&sprites, &transforms).join() {
-            basic.render(&mut encoder);
+            basic.render(&mut encoder, &transform, &sprite, &asset_data);
         }
 
         window.swap_buffers().unwrap();
