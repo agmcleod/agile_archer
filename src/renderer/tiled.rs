@@ -4,12 +4,18 @@ extern crate genmesh;
 extern crate tiled;
 extern crate specs;
 
-use cgmath::{Matrix4, Vector3};
+use cgmath::{Matrix4, Vector3, SquareMatrix};
 
 use genmesh::{Triangulate};
 use genmesh::generators::{SharedVertex, IndexedPolygon};
 
 use tiled::{Tileset};
+use specs::World;
+
+use renderer;
+use renderer::{WindowTargets};
+
+use components;
 
 pub struct VertexData {
     pub pos: [f32; 2],
@@ -95,5 +101,84 @@ impl TileMapPlane {
             data: vertex_data,
             index_data: index_data,
         }
+    }
+}
+
+gfx_defines!{
+    vertex Vertex {
+        pos: [f32; 2] = "a_Pos",
+        uv: [f32; 2] = "a_Uv",
+    }
+
+    constant Projection {
+        model: [[f32; 4]; 4] = "u_Model",
+        proj: [[f32; 4]; 4] = "u_Proj",
+    }
+
+    pipeline pipe {
+        vbuf: gfx::VertexBuffer<Vertex> = (),
+        projection_cb: gfx::ConstantBuffer<Projection> = "b_Projection",
+        tex: gfx::TextureSampler<[f32; 4]> = "t_Texture",
+        out: gfx::RenderTarget<renderer::ColorFormat> = "Target0",
+    }
+}
+
+
+pub struct PlaneRenderer<R: gfx::Resources> {
+    pso: gfx::PipelineState<R, pipe::Meta>,
+    projection: Projection,
+    params: pipe::Data<R>,
+    slice: gfx::Slice<R>,
+}
+
+impl <R>PlaneRenderer<R>
+    where R: gfx::Resources
+{
+    pub fn new<F>(factory: &mut F, tilemap_plane: &TileMapPlane, tiles_texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>, target: &WindowTargets<R>) -> PlaneRenderer<R>
+        where F: gfx::Factory<R>
+    {
+        use gfx::traits::FactoryExt;
+
+        let pso = factory.create_pipeline_simple(
+            include_bytes!("shaders/basic.glslv"),
+            include_bytes!("shaders/basic.glslf"),
+            pipe::new()
+        ).unwrap();
+
+        let data: Vec<Vertex> = tilemap_plane.data.iter().map(|quad| {
+            Vertex{
+                pos: quad.pos,
+                uv: quad.uv,
+            }
+        }).collect();
+        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&data, &tilemap_plane.index_data[..]);
+
+        PlaneRenderer{
+            pso: pso,
+            projection: Projection{
+                model: Matrix4::identity().into(),
+                proj: renderer::get_ortho().into(),
+            },
+            params: pipe::Data{
+                vbuf: vbuf,
+                projection_cb: factory.create_constant_buffer(1),
+                tex: (tiles_texture.clone(), factory.create_sampler_linear()),
+                out: target.color.clone(),
+            },
+            slice: slice,
+        }
+    }
+
+    pub fn render<C>(&mut self,
+        encoder: &mut gfx::Encoder<R, C>,
+        world: &World)
+        where R: gfx::Resources, C: gfx::CommandBuffer<R>
+    {
+
+        let camera = world.read_resource::<components::Camera>().wait();
+        self.projection.proj = (*camera).0.into();
+
+        encoder.update_constant_buffer(&self.params.projection_cb, &self.projection);
+        encoder.draw(&self.slice, &self.pso, &self.params);
     }
 }

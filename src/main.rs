@@ -26,7 +26,7 @@ mod spritesheet;
 use components::{Camera, Input, Player, Sprite, Transform};
 
 use renderer::{ColorFormat, DepthFormat};
-use renderer::tiled::TileMapPlane;
+use renderer::tiled::{TileMapPlane, PlaneRenderer};
 
 use spritesheet::Spritesheet;
 
@@ -49,7 +49,7 @@ fn main() {
         depth: main_depth,
     };
 
-    let mut basic = renderer::Basic::new(&mut factory, target);
+    let mut basic = renderer::Basic::new(&mut factory, &target);
 
     let mut planner = {
         let mut world = World::new();
@@ -62,13 +62,14 @@ fn main() {
         specs::Planner::<()>::new(world)
     };
 
-    let tile_map_render_data: Vec<TileMapPlane> = map.layers.iter().filter(|layer| layer.name != "meta").map(|layer| {
-        TileMapPlane::new(&map, &layer)
-    }).collect();
-
     let tileset = map.tilesets.get(0).unwrap(); // working under the assumption i will only use one tileset
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
+
+    let mut tile_map_render_data: Vec<PlaneRenderer<_>> = map.layers.iter().filter(|layer| layer.name != "meta").map(|layer| {
+        let tilemap_plane = TileMapPlane::new(&map, &layer);
+        PlaneRenderer::new(&mut factory, &tilemap_plane, &tiles_texture, &target)
+    }).collect();
 
     let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();
     let spritesheet: Spritesheet = serde_json::from_str(asset_data.as_ref()).unwrap();
@@ -95,7 +96,12 @@ fn main() {
 
         basic.reset_transform();
 
-        basic.render_map(&mut encoder, planner.mut_world(), &tile_map_render_data, &tiles_texture, &mut factory);
+        encoder.clear(&target.color, [16.0 / 256.0, 14.0 / 256.0, 22.0 / 256.0, 1.0]);
+        encoder.clear_depth(&target.depth, 1.0);
+
+        for plane_renderer in tile_map_render_data.iter_mut() {
+            plane_renderer.render(&mut encoder, planner.mut_world());
+        }
 
         let world = planner.mut_world();
         let sprites = world.read::<Sprite>().pass();
