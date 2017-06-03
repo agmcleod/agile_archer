@@ -30,7 +30,7 @@ gfx_defines!{
         vbuf: gfx::VertexBuffer<Vertex> = (),
         projection_cb: gfx::ConstantBuffer<Projection> = "b_Projection",
         tex: gfx::TextureSampler<[f32; 4]> = "t_Texture",
-        out: gfx::RenderTarget<ColorFormat> = "Target0",
+        out: gfx::BlendTarget<ColorFormat> = ("Target0", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
     }
 }
 
