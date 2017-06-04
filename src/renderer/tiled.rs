@@ -73,10 +73,10 @@ impl TileMapPlane {
                             let ih = image.height as u32;
                             let tiles_wide = iw / tileset.tile_width as u32;
                             let tiles_high = ih / tileset.tile_width as u32;
-                            let tile_width_uv = tileset.tile_width as f32 / iw as f32;
-                            let tile_height_uv = tileset.tile_height as f32 / ih as f32;
-                            let x = ((*cell as u32 - 1u32) % tiles_wide) as f32;
-                            let y = ((*cell as u32 - 1u32) / tiles_wide) as f32;
+                            let tile_width_uv = tileset.tile_width as f32 / iw as f32 - 1.0 / iw as f32;
+                            let tile_height_uv = tileset.tile_height as f32 / ih as f32 - 1.0 / ih as f32;
+                            let x = ((*cell as u32 - 1u32) % tiles_wide) as f32 + 1.0 / iw as f32;
+                            let y = ((*cell as u32 - 1u32) / tiles_wide) as f32 + 1.0 / ih as f32;
                             let i = index as usize;
                             let tiles_wide = tiles_wide as f32;
                             let tiles_high = tiles_high as f32;
