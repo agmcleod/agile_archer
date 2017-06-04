@@ -18,7 +18,7 @@ use specs::{Gate, Join, Planner, World};
 use std::path::Path;
 use std::fs::File;
 use tiled::parse;
-use glutin::{ElementState, VirtualKeyCode};
+use glutin::{ElementState, MouseButton, VirtualKeyCode};
 
 mod renderer;
 mod loader;
@@ -108,6 +108,14 @@ fn main() {
                     let mut input = world.write_resource::<Input>().wait();
                     input.mouse_pos.0 = (x as f32 / input.hidpi_factor) as i32;
                     input.mouse_pos.1 = (y as f32 / input.hidpi_factor) as i32;
+                },
+                glutin::Event::MouseInput(mouse_state, MouseButton::Left) => {
+                    let world = planner.mut_world();
+                    let mut input = world.write_resource::<Input>().wait();
+                    match mouse_state {
+                        ElementState::Pressed => input.mouse_pressed = true,
+                        ElementState::Released => input.mouse_pressed = false,
+                    };
                 },
                 glutin::Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) | glutin::Event::Closed => break 'main,
                 glutin::Event::KeyboardInput(key_state, _, key) => {

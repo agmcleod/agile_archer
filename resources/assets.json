@@ -2,15 +2,15 @@
 
 {
 	"filename": "player.png",
-	"frame": {"x":2,"y":2,"w":32,"h":64},
+	"frame": {"x":2,"y":2,"w":24,"h":58},
 	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":64},
+	"trimmed": true,
+	"spriteSourceSize": {"x":7,"y":6,"w":24,"h":58},
 	"sourceSize": {"w":32,"h":64}
 },
 {
 	"filename": "transparenttile.png",
-	"frame": {"x":2,"y":68,"w":32,"h":32},
+	"frame": {"x":28,"y":2,"w":32,"h":32},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
@@ -21,8 +21,8 @@
 	"version": "1.0",
 	"image": "assets.png",
 	"format": "RGBA8888",
-	"size": {"w":64,"h":128},
+	"size": {"w":64,"h":64},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:18585b045bcbddbbce46aa15b9eb1937:cab24501b4edd2dea182bdafd83f3be1:a759b6bbc8381ac9c472b28f589ad0d6$"
+	"smartupdate": "$TexturePacker:SmartUpdate:9b7175948a2049d3ccbe273080263973:a83cd17988a0290bb52e69056335e69b:a759b6bbc8381ac9c472b28f589ad0d6$"
 }
 }
