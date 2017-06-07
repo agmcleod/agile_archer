@@ -33,6 +33,62 @@ use renderer::tiled::{TileMapPlane, PlaneRenderer};
 
 use spritesheet::Spritesheet;
 
+const COLLISION_LAYERS: [&str; 1] = ["ground"];
+
+fn for_each_cell<F>(layer: &tiled::Layer, mut cb: F)
+    where F: FnMut(usize, usize)
+{
+    for (y, cols) in layer.tiles.iter().enumerate() {
+        for (x, cell) in cols.iter().enumerate() {
+            if *cell != 0 {
+                cb(x, y);
+            }
+        }
+    }
+}
+
+fn parse_out_map_layers<R, F>(
+    map: &tiled::Map,
+    tiles_texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>,
+    factory: &mut F,
+    target: &renderer::WindowTargets<R>) -> (Vec<PlaneRenderer<R>>, HashMap<usize, Vec<usize>>)
+    where R: gfx::Resources, F: gfx::Factory<R>
+{
+    let mut tile_map_render_data: Vec<PlaneRenderer<R>> = Vec::new();
+    let mut target_areas: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut unpassable_tiles: HashMap<usize, Vec<usize>> = HashMap::new();
+    for layer in map.layers.iter() {
+        if layer.name == "meta" {
+            for_each_cell(&layer, |x, y| {
+                if target_areas.contains_key(&x) {
+                    let mut ys = target_areas.get_mut(&x).unwrap();
+                    ys.push(y);
+                } else {
+                    target_areas.insert(x, vec![y]);
+                }
+            });
+        } else {
+            let tilemap_plane = TileMapPlane::new(&map, &layer);
+            tile_map_render_data.push(PlaneRenderer::new(factory, &tilemap_plane, tiles_texture, target));
+            if COLLISION_LAYERS.contains(&layer.name.as_ref()) {
+                for_each_cell(&layer, |x, y| {
+                    if unpassable_tiles.contains_key(&x) {
+                        let mut ys = unpassable_tiles.get_mut(&x).unwrap();
+                        ys.push(y);
+                    } else {
+                        unpassable_tiles.insert(x, vec![y]);
+                    }
+                });
+            }
+        }
+    }
+
+    (
+        tile_map_render_data,
+        target_areas
+    )
+}
+
 fn main() {
     let dim = renderer::get_dimensions();
     let builder = glutin::WindowBuilder::new()
@@ -58,27 +114,7 @@ fn main() {
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
-    let mut tile_map_render_data: Vec<PlaneRenderer<_>> = Vec::new();
-    let mut target_areas: HashMap<usize, Vec<usize>> = HashMap::new();
-    for layer in map.layers.iter() {
-        if layer.name == "meta" {
-            for (y, cols) in layer.tiles.iter().enumerate() {
-                for (x, cell) in cols.iter().enumerate() {
-                    if *cell != 0 {
-                        if !target_areas.contains_key(&x) {
-                            target_areas.insert(x, vec![y]);
-                        } else {
-                            let mut ys = target_areas.get_mut(&x).unwrap();
-                            ys.push(y);
-                        }
-                    }
-                }
-            }
-        } else {
-            let tilemap_plane = TileMapPlane::new(&map, &layer);
-            tile_map_render_data.push(PlaneRenderer::new(&mut factory, &tilemap_plane, &tiles_texture, &target));
-        }
-    }
+    let (mut tile_map_render_data, target_areas) = parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
 
     let mut planner = {
         let mut world = World::new();
