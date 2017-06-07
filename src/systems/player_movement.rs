@@ -35,8 +35,8 @@ impl System<()> for PlayerMovement {
 
         for (_, sprite, transform) in (&highlight_tile_storage, &mut sprites, &mut transforms).join() {
             sprite.visible = false;
-            if let Some(ys) = tile_data.move_to_targets.get(&(mouse_tile.0 as usize)) {
-                if ys.contains(&(mouse_tile.1 as usize)) {
+            if let Some(xs) = tile_data.move_to_targets.get(&(mouse_tile.1 as usize)) {
+                if xs.contains(&(mouse_tile.0 as usize)) {
                     sprite.visible = true;
                     transform.pos.x = mouse_tile.0 * tile_data.tile_size[1];
                     transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 * tile_data.tile_size[1]) - tile_data.tile_size[1];
@@ -46,8 +46,8 @@ impl System<()> for PlayerMovement {
 
         if input.mouse_pressed {
             for (_, transform) in (&players, &mut transforms).join() {
-                if let Some(ys) = tile_data.move_to_targets.get(&(mouse_tile.0 as usize)) {
-                    if ys.contains(&(mouse_tile.1 as usize)) {
+                if let Some(xs) = tile_data.move_to_targets.get(&(mouse_tile.1 as usize)) {
+                    if xs.contains(&(mouse_tile.0 as usize)) {
                         transform.pos.x = mouse_tile.0 * tile_data.tile_size[1];
                         transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 * tile_data.tile_size[1]) - tile_data.tile_size[1];
                     }

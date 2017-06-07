@@ -23,6 +23,7 @@ use glutin::{ElementState, MouseButton, VirtualKeyCode};
 mod renderer;
 mod loader;
 mod components;
+mod math;
 mod spritesheet;
 mod systems;
 
@@ -35,12 +36,12 @@ use spritesheet::Spritesheet;
 
 const COLLISION_LAYERS: [&str; 1] = ["ground"];
 
-fn for_each_cell<F>(layer: &tiled::Layer, mut cb: F)
+fn for_each_cell<F>(layer: &tiled::Layer, include_zero: bool, mut cb: F)
     where F: FnMut(usize, usize)
 {
     for (y, cols) in layer.tiles.iter().enumerate() {
         for (x, cell) in cols.iter().enumerate() {
-            if *cell != 0 {
+            if include_zero || *cell != 0 {
                 cb(x, y);
             }
         }
@@ -59,24 +60,24 @@ fn parse_out_map_layers<R, F>(
     let mut unpassable_tiles: HashMap<usize, Vec<usize>> = HashMap::new();
     for layer in map.layers.iter() {
         if layer.name == "meta" {
-            for_each_cell(&layer, |x, y| {
-                if target_areas.contains_key(&x) {
-                    let mut ys = target_areas.get_mut(&x).unwrap();
-                    ys.push(y);
+            for_each_cell(&layer, false, |x, y| {
+                if target_areas.contains_key(&y) {
+                    let mut xs = target_areas.get_mut(&y).unwrap();
+                    xs.push(x);
                 } else {
-                    target_areas.insert(x, vec![y]);
+                    target_areas.insert(y, vec![x]);
                 }
             });
         } else {
             let tilemap_plane = TileMapPlane::new(&map, &layer);
             tile_map_render_data.push(PlaneRenderer::new(factory, &tilemap_plane, tiles_texture, target));
             if COLLISION_LAYERS.contains(&layer.name.as_ref()) {
-                for_each_cell(&layer, |x, y| {
-                    if unpassable_tiles.contains_key(&x) {
-                        let mut ys = unpassable_tiles.get_mut(&x).unwrap();
-                        ys.push(y);
+                for_each_cell(&layer, true, |x, y| {
+                    if unpassable_tiles.contains_key(&y) {
+                        let mut xs = unpassable_tiles.get_mut(&y).unwrap();
+                        xs.push(x);
                     } else {
-                        unpassable_tiles.insert(x, vec![y]);
+                        unpassable_tiles.insert(y, vec![x]);
                     }
                 });
             }
