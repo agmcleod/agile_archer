@@ -52,7 +52,7 @@ fn parse_out_map_layers<R, F>(
     map: &tiled::Map,
     tiles_texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>,
     factory: &mut F,
-    target: &renderer::WindowTargets<R>) -> (Vec<PlaneRenderer<R>>, HashMap<usize, Vec<usize>>)
+    target: &renderer::WindowTargets<R>) -> (Vec<PlaneRenderer<R>>, HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>)
     where R: gfx::Resources, F: gfx::Factory<R>
 {
     let mut tile_map_render_data: Vec<PlaneRenderer<R>> = Vec::new();
@@ -86,7 +86,8 @@ fn parse_out_map_layers<R, F>(
 
     (
         tile_map_render_data,
-        target_areas
+        target_areas,
+        unpassable_tiles
     )
 }
 
@@ -115,7 +116,7 @@ fn main() {
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
-    let (mut tile_map_render_data, target_areas) = parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
+    let (mut tile_map_render_data, target_areas, unpassable_tiles) = parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
 
     let mut planner = {
         let mut world = World::new();
@@ -126,12 +127,14 @@ fn main() {
         world.register::<Sprite>();
         world.register::<Transform>();
         world.register::<Player>();
-        world.create_now().with(Transform::new(0, 64, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player{});
+        world.create_now().with(Transform::new(0, 64, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player::new());
         world.create_now().with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false }).with(HighlightTile{});
         Planner::<()>::new(world)
     };
 
-    planner.add_system(systems::PlayerMovement{}, "player_movement", 1);
+    let pathable_grid: Vec<Vec<math::astar::TileType>> = math::astar::build_grid_for_map(&unpassable_tiles, map.width as usize, map.height as usize);
+
+    planner.add_system(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", 1);
 
     let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();
     let spritesheet: Spritesheet = serde_json::from_str(asset_data.as_ref()).unwrap();

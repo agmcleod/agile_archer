@@ -1,1 +1,1 @@
-mod astar;
+pub mod astar;

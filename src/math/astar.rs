@@ -101,7 +101,7 @@ pub fn build_grid_for_map(closed_tiles: &HashMap<usize, Vec<usize>>, tiles_wide:
     tiles
 }
 
-pub fn find_path(tiles: &Vec<Vec<TileType>>, start_pos: (usize, usize), target: (usize, usize)) {
+pub fn find_path(tiles: &Vec<Vec<TileType>>, start_pos: (usize, usize), target: (usize, usize)) -> Vec<(usize, usize)> {
     let mut closed: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
     let mut costs: HashMap<(usize, usize), usize> = HashMap::new();
     costs.insert(start_pos, 0);
@@ -138,5 +138,5 @@ pub fn find_path(tiles: &Vec<Vec<TileType>>, start_pos: (usize, usize), target: 
         }
     }
 
-    println!("{}", tracked_positions.len());
+    tracked_positions
 }
