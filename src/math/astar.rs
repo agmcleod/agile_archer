@@ -1,9 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, BinaryHeap};
 
-const GRID_ROWS: usize = 45;
-const GRID_COLS: usize = 45;
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TileType {
     Unpassable, Open
@@ -56,7 +53,7 @@ fn get_neighbours(pos: &(usize, usize), tiles: &Vec<Vec<TileType>>) -> Vec<(usiz
         }
     }
 
-    if pos.0 < GRID_COLS - 1 {
+    if pos.0 < tiles[0].len() - 1 {
         let tile_type = &tiles[pos.1][pos.0 + 1];
         if *tile_type == TileType::Open {
             neighbours.push((pos.0 + 1, pos.1));
@@ -70,7 +67,7 @@ fn get_neighbours(pos: &(usize, usize), tiles: &Vec<Vec<TileType>>) -> Vec<(usiz
         }
     }
 
-    if pos.1 < GRID_ROWS - 1 {
+    if pos.1 < tiles.len() - 1 {
         let tile_type = &tiles[pos.1 + 1][pos.0];
         if *tile_type == TileType::Open {
             neighbours.push((pos.0, pos.1 + 1));
@@ -110,8 +107,6 @@ pub fn find_path(tiles: &Vec<Vec<TileType>>, start_pos: (usize, usize), target: 
     heap.push(Location{ position: start_pos, cost: 0 });
 
     let mut tracked_positions: Vec<(usize, usize)> = Vec::new();
-    let mut scanned_locations: HashSet<(usize, usize)> = HashSet::new();
-    scanned_locations.insert((1, 1));
 
     while let Some(location) = heap.pop() {
         if location.position.0 == target.0 && location.position.1 == target.1 {
@@ -138,5 +133,6 @@ pub fn find_path(tiles: &Vec<Vec<TileType>>, start_pos: (usize, usize), target: 
         }
     }
 
+    tracked_positions.reverse();
     tracked_positions
 }

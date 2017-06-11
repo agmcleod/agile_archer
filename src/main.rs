@@ -72,7 +72,7 @@ fn parse_out_map_layers<R, F>(
             let tilemap_plane = TileMapPlane::new(&map, &layer);
             tile_map_render_data.push(PlaneRenderer::new(factory, &tilemap_plane, tiles_texture, target));
             if COLLISION_LAYERS.contains(&layer.name.as_ref()) {
-                for_each_cell(&layer, true, |x, y| {
+                for_each_cell(&layer, false, |x, y| {
                     if unpassable_tiles.contains_key(&y) {
                         let mut xs = unpassable_tiles.get_mut(&y).unwrap();
                         xs.push(x);
