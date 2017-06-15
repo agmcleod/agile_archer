@@ -1,7 +1,7 @@
 extern crate specs;
 
 use std::ops::Deref;
-use specs::{Join, RunArg, System};
+use specs::{Fetch, Join, ReadStorage, WriteStorage, System};
 use components::{Input, HighlightTile, Player, Sprite, TileData, Transform};
 use math::astar;
 
@@ -18,18 +18,19 @@ impl PlayerMovement {
     }
 }
 
-impl System<()> for PlayerMovement {
-    fn run(&mut self, args: RunArg, _: ()) {
-        let (highlight_tile_storage, input_storage, mut players, mut sprites, tile_data_storage, mut transforms) = args.fetch(|w| {
-            (
-                w.read::<HighlightTile>(),
-                w.read_resource::<Input>(),
-                w.write::<Player>(),
-                w.write::<Sprite>(),
-                w.read_resource::<TileData>(),
-                w.write::<Transform>(),
-            )
-        });
+impl<'a> System<'a> for PlayerMovement {
+    type SystemData = (
+        ReadStorage<'a, HighlightTile>,
+        Fetch<'a, Input>,
+        WriteStorage<'a, Player>,
+        WriteStorage<'a, Sprite>,
+        Fetch<'a, TileData>,
+        WriteStorage<'a, Transform>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        use std::ops::Deref;
+        let (highlight_tile_storage, input_storage, mut players, mut sprites, tile_data_storage, mut transforms) = data;
 
         let input: &Input = input_storage.deref();
         let tile_data: &TileData = tile_data_storage.deref();

@@ -174,8 +174,9 @@ impl <R>PlaneRenderer<R>
         world: &World)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>
     {
-
-        let camera = world.read_resource::<components::Camera>().wait();
+        use std::ops::Deref;
+        let camera_res = world.read_resource::<components::Camera>();
+        let camera = camera_res.deref();
         self.projection.proj = (*camera).0.into();
 
         encoder.update_constant_buffer(&self.params.projection_cb, &self.projection);

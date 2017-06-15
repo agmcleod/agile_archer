@@ -84,7 +84,10 @@ impl<R> Basic<R>
         texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>
     {
-        let camera = world.read_resource::<components::Camera>().wait();
+        use std::ops::Deref;
+
+        let camera_res = world.read_resource::<components::Camera>();
+        let camera = camera_res.deref();
         let x = transform.pos.x as f32;
         let y = transform.pos.y as f32;
         let w = transform.size.x as f32;

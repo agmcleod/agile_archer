@@ -11,9 +11,10 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 
 use gfx::Device;
-use specs::{Gate, Join, Planner, World};
+use specs::{DispatcherBuilder, Join, World};
 
 use std::path::Path;
 use std::fs::File;
@@ -118,23 +119,22 @@ fn main() {
 
     let (mut tile_map_render_data, target_areas, unpassable_tiles) = parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
 
-    let mut planner = {
-        let mut world = World::new();
-        world.add_resource::<Camera>(Camera(renderer::get_ortho()));
-        world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
-        world.add_resource::<TileData>(TileData::new(target_areas, &map));
-        world.register::<HighlightTile>();
-        world.register::<Sprite>();
-        world.register::<Transform>();
-        world.register::<Player>();
-        world.create_now().with(Transform::new(0, 64, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player::new());
-        world.create_now().with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false }).with(HighlightTile{});
-        Planner::<()>::new(world)
-    };
+    let mut world = World::new();
+    world.add_resource::<Camera>(Camera(renderer::get_ortho()));
+    world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
+    world.add_resource::<TileData>(TileData::new(target_areas, &map));
+    world.register::<HighlightTile>();
+    world.register::<Sprite>();
+    world.register::<Transform>();
+    world.register::<Player>();
+    world.create_entity().with(Transform::new(0, 64, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player::new());
+    world.create_entity().with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false }).with(HighlightTile{});
 
     let pathable_grid: Vec<Vec<math::astar::TileType>> = math::astar::build_grid_for_map(&unpassable_tiles, map.width as usize, map.height as usize);
 
-    planner.add_system(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", 1);
+    let mut dispatcher = DispatcherBuilder::new()
+        .add(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", &[])
+        .build();
 
     let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();
     let spritesheet: Spritesheet = serde_json::from_str(asset_data.as_ref()).unwrap();
@@ -144,14 +144,14 @@ fn main() {
         for event in window.poll_events() {
             match event {
                 glutin::Event::MouseMoved(x, y) => {
-                    let world = planner.mut_world();
-                    let mut input = world.write_resource::<Input>().wait();
+                    let mut input_res = world.write_resource::<Input>();
+                    let mut input = input_res.deref_mut();
                     input.mouse_pos.0 = (x as f32 / input.hidpi_factor) as i32;
                     input.mouse_pos.1 = (y as f32 / input.hidpi_factor) as i32;
                 },
                 glutin::Event::MouseInput(mouse_state, MouseButton::Left) => {
-                    let world = planner.mut_world();
-                    let mut input = world.write_resource::<Input>().wait();
+                    let mut input_res = world.write_resource::<Input>();
+                    let mut input = input_res.deref_mut();
                     match mouse_state {
                         ElementState::Pressed => input.mouse_pressed = true,
                         ElementState::Released => input.mouse_pressed = false,
@@ -159,8 +159,8 @@ fn main() {
                 },
                 glutin::Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) | glutin::Event::Closed => break 'main,
                 glutin::Event::KeyboardInput(key_state, _, key) => {
-                    let world = planner.mut_world();
-                    let mut input = world.write_resource::<Input>().wait();
+                    let mut input_res = world.write_resource::<Input>();
+                    let mut input = input_res.deref_mut();
                     let key = key.unwrap();
                     if input.pressed_keys.contains_key(&key) {
                         match key_state {
@@ -173,7 +173,7 @@ fn main() {
             }
         }
 
-        planner.dispatch(());
+        dispatcher.dispatch(&mut world.res);
 
         basic.reset_transform();
 
@@ -181,16 +181,15 @@ fn main() {
         encoder.clear_depth(&target.depth, 1.0);
 
         for plane_renderer in tile_map_render_data.iter_mut() {
-            plane_renderer.render(&mut encoder, planner.mut_world());
+            plane_renderer.render(&mut encoder, &mut world);
         }
 
-        let world = planner.mut_world();
-        let sprites = world.read::<Sprite>().pass();
-        let transforms = world.read::<Transform>().pass();
+        let sprites = world.read::<Sprite>();
+        let transforms = world.read::<Transform>();
 
         for (sprite, transform) in (&sprites, &transforms).join() {
             if sprite.visible {
-                basic.render(&mut encoder, world, &mut factory, &transform, &sprite, &spritesheet, &asset_texture);
+                basic.render(&mut encoder, &world, &mut factory, &transform, &sprite, &spritesheet, &asset_texture);
             }
         }
 

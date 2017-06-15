@@ -24,12 +24,6 @@ impl PartialOrd for Location {
     }
 }
 
-fn is_coordinate_open(x: &usize, y: &usize) -> bool {
-    let n = x * x + 3 * x + 2 * x * y + y + y * y;
-    let n = n + 1362; // puzzle input
-    n.count_ones() % 2 == 0
-}
-
 fn distance_to_target(location: &(usize, usize), target: &(usize, usize)) -> usize {
     let mut x_diff = location.1 as i16 - target.1 as i16;
     let mut y_diff = location.0 as i16 - target.0 as i16;
