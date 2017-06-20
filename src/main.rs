@@ -27,6 +27,7 @@ mod components;
 mod math;
 mod spritesheet;
 mod systems;
+mod utils;
 
 use components::{Camera, HighlightTile, Input, Player, Sprite, TileData, Transform};
 
@@ -34,63 +35,6 @@ use renderer::{ColorFormat, DepthFormat};
 use renderer::tiled::{TileMapPlane, PlaneRenderer};
 
 use spritesheet::Spritesheet;
-
-const COLLISION_LAYERS: [&str; 1] = ["ground"];
-
-fn for_each_cell<F>(layer: &tiled::Layer, include_zero: bool, mut cb: F)
-    where F: FnMut(usize, usize)
-{
-    for (y, cols) in layer.tiles.iter().enumerate() {
-        for (x, cell) in cols.iter().enumerate() {
-            if include_zero || *cell != 0 {
-                cb(x, y);
-            }
-        }
-    }
-}
-
-fn parse_out_map_layers<R, F>(
-    map: &tiled::Map,
-    tiles_texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>,
-    factory: &mut F,
-    target: &renderer::WindowTargets<R>) -> (Vec<PlaneRenderer<R>>, HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>)
-    where R: gfx::Resources, F: gfx::Factory<R>
-{
-    let mut tile_map_render_data: Vec<PlaneRenderer<R>> = Vec::new();
-    let mut target_areas: HashMap<usize, Vec<usize>> = HashMap::new();
-    let mut unpassable_tiles: HashMap<usize, Vec<usize>> = HashMap::new();
-    for layer in map.layers.iter() {
-        if layer.name == "meta" {
-            for_each_cell(&layer, false, |x, y| {
-                if target_areas.contains_key(&y) {
-                    let mut xs = target_areas.get_mut(&y).unwrap();
-                    xs.push(x);
-                } else {
-                    target_areas.insert(y, vec![x]);
-                }
-            });
-        } else {
-            let tilemap_plane = TileMapPlane::new(&map, &layer);
-            tile_map_render_data.push(PlaneRenderer::new(factory, &tilemap_plane, tiles_texture, target));
-            if COLLISION_LAYERS.contains(&layer.name.as_ref()) {
-                for_each_cell(&layer, false, |x, y| {
-                    if unpassable_tiles.contains_key(&y) {
-                        let mut xs = unpassable_tiles.get_mut(&y).unwrap();
-                        xs.push(x);
-                    } else {
-                        unpassable_tiles.insert(y, vec![x]);
-                    }
-                });
-            }
-        }
-    }
-
-    (
-        tile_map_render_data,
-        target_areas,
-        unpassable_tiles
-    )
-}
 
 fn main() {
     let dim = renderer::get_dimensions();
@@ -117,12 +61,12 @@ fn main() {
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
-    let (mut tile_map_render_data, target_areas, unpassable_tiles) = parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
+    let (mut tile_map_render_data, walkable_groups, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
 
     let mut world = World::new();
     world.add_resource::<Camera>(Camera(renderer::get_ortho()));
     world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
-    world.add_resource::<TileData>(TileData::new(target_areas, &map));
+    world.add_resource::<TileData>(TileData::new(walkable_groups, &map));
     world.register::<HighlightTile>();
     world.register::<Sprite>();
     world.register::<Transform>();
