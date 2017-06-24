@@ -39,25 +39,29 @@ impl<'a> System<'a> for PlayerMovement {
 
         for (_, sprite, transform) in (&highlight_tile_storage, &mut sprites, &mut transforms).join() {
             sprite.visible = false;
-            if let Some(xs) = tile_data.move_to_targets.get(&(mouse_tile.1 as usize)) {
-                if xs.contains(&(mouse_tile.0 as usize)) {
-                    sprite.visible = true;
-                    transform.pos.x = mouse_tile.0 * tile_data.tile_size[1];
-                    transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 * tile_data.tile_size[1]) - tile_data.tile_size[1];
+            for group in &tile_data.walkable_groups {
+                if let Some(xs) = group.get(&(mouse_tile.1 as usize)) {
+                    if xs.contains(&(mouse_tile.0 as usize)) {
+                        sprite.visible = true;
+                        transform.pos.x = mouse_tile.0 * tile_data.tile_size[1];
+                        transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 * tile_data.tile_size[1]) - tile_data.tile_size[1];
+                    }
                 }
             }
         }
 
         for (player, transform) in (&mut players, &mut transforms).join() {
             if input.mouse_pressed && !player.moving {
-                if let Some(xs) = tile_data.move_to_targets.get(&(mouse_tile.1 as usize)) {
-                    if xs.contains(&(mouse_tile.0 as usize)) {
-                        player.moving = true;
-                        player.movement_route = astar::find_path(
-                            &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
-                            (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
-                            (mouse_tile.0 as usize, mouse_tile.1 as usize)
-                        );
+                for group in &tile_data.walkable_groups {
+                    if let Some(xs) = group.get(&(mouse_tile.1 as usize)) {
+                        if xs.contains(&(mouse_tile.0 as usize)) {
+                            player.moving = true;
+                            player.movement_route = astar::find_path(
+                                &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
+                                (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
+                                (mouse_tile.0 as usize, mouse_tile.1 as usize)
+                            );
+                        }
                     }
                 }
             } else if player.moving {

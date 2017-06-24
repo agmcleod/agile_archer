@@ -23,7 +23,7 @@ pub fn parse_out_map_layers<R, F>(
     map: &tiled::Map,
     tiles_texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>,
     factory: &mut F,
-    target: &renderer::WindowTargets<R>) -> (Vec<PlaneRenderer<R>>, Vec<Vec<(usize, usize)>>, HashMap<usize, Vec<usize>>)
+    target: &renderer::WindowTargets<R>) -> (Vec<PlaneRenderer<R>>, Vec<HashMap<usize, Vec<usize>>>, HashMap<usize, Vec<usize>>)
     where R: gfx::Resources, F: gfx::Factory<R>
 {
     let mut tile_map_render_data: Vec<PlaneRenderer<R>> = Vec::new();
@@ -68,24 +68,49 @@ pub fn parse_out_map_layers<R, F>(
     for (col, rows) in ground_tiles.iter() {
         for row in rows {
             let mut found = false;
-            for group in groups.iter_mut() {
+            let mut temp_row = 0;
+            let mut temp_col = 0;
+            let mut target_group_index = 0;
+            for (i, group) in groups.iter().enumerate() {
                 let last_group = &group[group.len() - 1];
                 // if the X is 0 or +1 to the right. If the Y is between +1 and -1 from the last
                 if col - last_group.1 >= 0i32 && row - last_group.0 < 2i32 && row - last_group.0 > -2i32 {
-                    group.push((*row, *col));
+                    temp_row = *row;
+                    temp_col = *col;
+                    target_group_index = i;
                     found = true;
                     break
                 }
             }
-            if !found {
+            if found {
+                groups.get_mut(target_group_index).unwrap().push((temp_row, temp_col));
+            } else {
                 groups.push(vec![(*row, *col)]);
             }
         }
     }
 
+    let mut hash_groups: Vec<HashMap<usize, Vec<usize>>> = Vec::new();
+
+    for group in groups {
+        let mut coords: HashMap<usize, Vec<usize>> = HashMap::new();
+        for (y, x) in group {
+            let y = y as usize;
+            let x = x as usize;
+            if coords.contains_key(&y) {
+                let mut xs = coords.get_mut(&y).unwrap();
+                xs.push(x);
+            } else {
+                coords.insert(y, vec![x]);
+            }
+        }
+
+        hash_groups.push(coords);
+    }
+
     (
         tile_map_render_data,
-        groups,
+        hash_groups,
         unpassable_tiles
     )
 }
