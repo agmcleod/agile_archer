@@ -71,6 +71,7 @@ pub fn parse_out_map_layers<R, F>(
             let mut temp_row = 0;
             let mut temp_col = 0;
             let mut target_group_index = 0;
+
             for (i, group) in groups.iter().enumerate() {
                 let last_group = &group[group.len() - 1];
                 // if the X is 0 or +1 to the right. If the Y is between +1 and -1 from the last
