@@ -44,15 +44,16 @@ pub fn parse_out_map_layers<R, F>(
                     if y > 0 {
                         // if above row for x coord is not a collision tile
                         if let Some(xs) = unpassable_tiles.get(&(y - 1)) {
-                            if xs.contains(&x) {
+                            if !xs.contains(&x) {
                                 // it is open, so let's add it
                                 // we track x by y instead of y by x, as we need to go in that order for the tile grouping of grounds
                                 let x = x as i32;
+                                let y = (y - 1) as i32;
                                 if ground_tiles.contains_key(&x) {
                                     let mut ys = ground_tiles.get_mut(&x).unwrap();
-                                    ys.push(y as i32);
+                                    ys.push(y);
                                 } else {
-                                    ground_tiles.insert(x, vec![y as i32]);
+                                    ground_tiles.insert(x, vec![y]);
                                 }
                             }
                         }
