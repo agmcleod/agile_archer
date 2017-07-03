@@ -56,6 +56,15 @@ pub fn parse_out_map_layers<R, F>(
                                     ground_tiles.insert(x, vec![y]);
                                 }
                             }
+                        } else {
+                            let x = x as i32;
+                            let y = (y - 1) as i32;
+                            if ground_tiles.contains_key(&x) {
+                                let mut ys = ground_tiles.get_mut(&x).unwrap();
+                                ys.push(y);
+                            } else {
+                                ground_tiles.insert(x, vec![y]);
+                            }
                         }
                     }
                 });
