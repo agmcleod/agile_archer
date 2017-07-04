@@ -9,6 +9,7 @@ extern crate tiled;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate linked_hash_map;
 
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};

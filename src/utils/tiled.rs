@@ -1,6 +1,8 @@
 extern crate gfx;
 extern crate tiled;
 
+use linked_hash_map::LinkedHashMap;
+
 use std::collections::HashMap;
 use renderer;
 use renderer::tiled::{TileMapPlane, PlaneRenderer};
@@ -19,6 +21,19 @@ fn for_each_cell<F>(layer: &tiled::Layer, include_zero: bool, mut cb: F)
     }
 }
 
+fn add_column_above_to_ground(x: usize, y: usize, ground_tiles: &mut LinkedHashMap<i32, Vec<i32>>) {
+    // it is open, so let's add it
+    // we track x by y instead of y by x, as we need to go in that order for the tile grouping of grounds
+    let x = x as i32;
+    let y = (y - 1) as i32;
+    if ground_tiles.contains_key(&x) {
+        let mut ys = ground_tiles.get_mut(&x).unwrap();
+        ys.push(y);
+    } else {
+        ground_tiles.insert(x, vec![y]);
+    }
+}
+
 pub fn parse_out_map_layers<R, F>(
     map: &tiled::Map,
     tiles_texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>,
@@ -27,7 +42,7 @@ pub fn parse_out_map_layers<R, F>(
     where R: gfx::Resources, F: gfx::Factory<R>
 {
     let mut tile_map_render_data: Vec<PlaneRenderer<R>> = Vec::new();
-    let mut ground_tiles: HashMap<i32, Vec<i32>> = HashMap::new();
+    let mut ground_tiles: LinkedHashMap<i32, Vec<i32>> = LinkedHashMap::new();
     let mut unpassable_tiles: HashMap<usize, Vec<usize>> = HashMap::new();
     for layer in map.layers.iter() {
         if layer.name != "meta" {
@@ -45,26 +60,10 @@ pub fn parse_out_map_layers<R, F>(
                         // if above row for x coord is not a collision tile
                         if let Some(xs) = unpassable_tiles.get(&(y - 1)) {
                             if !xs.contains(&x) {
-                                // it is open, so let's add it
-                                // we track x by y instead of y by x, as we need to go in that order for the tile grouping of grounds
-                                let x = x as i32;
-                                let y = (y - 1) as i32;
-                                if ground_tiles.contains_key(&x) {
-                                    let mut ys = ground_tiles.get_mut(&x).unwrap();
-                                    ys.push(y);
-                                } else {
-                                    ground_tiles.insert(x, vec![y]);
-                                }
+                                add_column_above_to_ground(x, y, &mut ground_tiles);
                             }
                         } else {
-                            let x = x as i32;
-                            let y = (y - 1) as i32;
-                            if ground_tiles.contains_key(&x) {
-                                let mut ys = ground_tiles.get_mut(&x).unwrap();
-                                ys.push(y);
-                            } else {
-                                ground_tiles.insert(x, vec![y]);
-                            }
+                            add_column_above_to_ground(x, y, &mut ground_tiles);
                         }
                     }
                 });
@@ -83,9 +82,9 @@ pub fn parse_out_map_layers<R, F>(
             let mut target_group_index = 0;
 
             for (i, group) in groups.iter().enumerate() {
-                let last_group = &group[group.len() - 1];
+                let last_cell = &group[group.len() - 1];
                 // if the X is 0 or +1 to the right. If the Y is between +1 and -1 from the last
-                if col - last_group.1 >= 0i32 && row - last_group.0 < 2i32 && row - last_group.0 > -2i32 {
+                if (col - last_cell.1 == 0i32 || col - last_cell.1 == 1i32) && row - last_cell.0 < 2i32 && row - last_cell.0 > -2i32 {
                     temp_row = *row;
                     temp_col = *col;
                     target_group_index = i;
@@ -93,6 +92,7 @@ pub fn parse_out_map_layers<R, F>(
                     break
                 }
             }
+
             if found {
                 groups.get_mut(target_group_index).unwrap().push((temp_row, temp_col));
             } else {
@@ -102,7 +102,6 @@ pub fn parse_out_map_layers<R, F>(
     }
 
     let mut hash_groups: Vec<HashMap<usize, Vec<usize>>> = Vec::new();
-
     for group in groups {
         let mut coords: HashMap<usize, Vec<usize>> = HashMap::new();
         for (y, x) in group {
