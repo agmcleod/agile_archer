@@ -21,6 +21,7 @@ use std::path::Path;
 use std::fs::File;
 use tiled::parse;
 use glutin::{ElementState, MouseButton, VirtualKeyCode};
+use cgmath::Vector2;
 
 mod renderer;
 mod loader;
@@ -36,6 +37,27 @@ use renderer::{ColorFormat, DepthFormat};
 use renderer::tiled::{TileMapPlane, PlaneRenderer};
 
 use spritesheet::Spritesheet;
+
+fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<HashMap<usize, Vec<usize>>>, map: &tiled::Map) {
+    world.add_resource::<Camera>(Camera(renderer::get_ortho()));
+    world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
+    world.add_resource::<TileData>(TileData::new(walkable_groups, map));
+    world.register::<HighlightTile>();
+    world.register::<Sprite>();
+    world.register::<Transform>();
+    world.register::<Player>();
+
+    let player_pos = Vector2::new(0, 64);
+
+    world.create_entity().with(Transform::new(player_pos.x, player_pos.y, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player::new());
+    world.create_entity().with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false }).with(HighlightTile{});
+
+    let mut tile_data_res = world.write_resource::<TileData>();
+    let mut tile_data = tile_data_res.deref_mut();
+    if !tile_data.set_player_group_index_from_pos(&player_pos) {
+        println!("Start position not on ground: {:?}", player_pos);
+    }
+}
 
 fn main() {
     let dim = renderer::get_dimensions();
@@ -65,15 +87,7 @@ fn main() {
     let (mut tile_map_render_data, walkable_groups, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
 
     let mut world = World::new();
-    world.add_resource::<Camera>(Camera(renderer::get_ortho()));
-    world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
-    world.add_resource::<TileData>(TileData::new(walkable_groups, &map));
-    world.register::<HighlightTile>();
-    world.register::<Sprite>();
-    world.register::<Transform>();
-    world.register::<Player>();
-    world.create_entity().with(Transform::new(0, 64, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player::new());
-    world.create_entity().with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false }).with(HighlightTile{});
+    setup_world(&mut world, &window, walkable_groups, &map);
 
     let pathable_grid: Vec<Vec<math::astar::TileType>> = math::astar::build_grid_for_map(&unpassable_tiles, map.width as usize, map.height as usize);
 

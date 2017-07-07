@@ -39,13 +39,12 @@ impl<'a> System<'a> for PlayerMovement {
 
         for (_, sprite, transform) in (&highlight_tile_storage, &mut sprites, &mut transforms).join() {
             sprite.visible = false;
-            for group in &tile_data.walkable_groups {
-                if let Some(xs) = group.get(&(mouse_tile.1 as usize)) {
-                    if xs.contains(&(mouse_tile.0 as usize)) {
-                        sprite.visible = true;
-                        transform.pos.x = mouse_tile.0 * tile_data.tile_size[1];
-                        transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 * tile_data.tile_size[1]) - tile_data.tile_size[1];
-                    }
+            let group = &tile_data.walkable_groups[tile_data.player_group_index];
+            if let Some(xs) = group.get(&(mouse_tile.1 as usize)) {
+                if xs.contains(&(mouse_tile.0 as usize)) {
+                    sprite.visible = true;
+                    transform.pos.x = mouse_tile.0 * tile_data.tile_size[1];
+                    transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 * tile_data.tile_size[1]) - tile_data.tile_size[1];
                 }
             }
         }
