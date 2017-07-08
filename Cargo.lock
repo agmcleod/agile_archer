@@ -13,7 +13,7 @@ dependencies = [
  "serde_derive 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "specs 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tiled 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tiled 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -894,7 +894,7 @@ dependencies = [
 
 [[package]]
 name = "tiled"
-version = "0.4.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "base64 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1146,7 +1146,7 @@ dependencies = [
 "checksum synom 0.11.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a393066ed9010ebaed60b9eafa373d4b1baac186dd7e008555b0f702b51945b6"
 "checksum target_build_utils 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "013d134ae4a25ee744ad6129db589018558f620ddfa44043887cdd45fa08e75c"
 "checksum tempfile 2.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "3213fd2b7ed87e39306737ccfac04b1233b57a33ca64cfbf52f2ffaa2b765e2f"
-"checksum tiled 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "835e3909c67b58ee9e2f7647c1b8a16d520807a66efa232d42606d62a427a73c"
+"checksum tiled 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "591a9d6919f9cd70cf84272012a58f078c8eb6572113086ea2e32c87e4a887c1"
 "checksum time 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "ffd7ccbf969a892bf83f1e441126968a07a3941c24ff522a26af9f9f4585d1a3"
 "checksum tuple_utils 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cbfecd7bb8f0a3e96b3b31c46af2677a55a588767c0091f484601424fcb20e7e"
 "checksum unicode-xid 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8c1f860d7d29cf02cb2f3f359fd35991af3d30bac52c57d265a3c461074cb4dc"

@@ -15,13 +15,14 @@ pub struct Size {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Frame {
     pub filename: String,
     pub frame: FrameData,
     pub rotated: bool,
     pub trimmed: bool,
-    pub spriteSourceSize: FrameData,
-    pub sourceSize: Size,
+    pub sprite_source_size: FrameData,
+    pub source_size: Size,
 }
 
 #[derive(Serialize, Deserialize)]

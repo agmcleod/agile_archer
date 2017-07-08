@@ -12,7 +12,7 @@ extern crate serde_json;
 extern crate linked_hash_map;
 
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
+use std::ops::{DerefMut};
 
 use gfx::Device;
 use specs::{DispatcherBuilder, Join, World};
@@ -34,7 +34,6 @@ mod utils;
 use components::{Camera, HighlightTile, Input, Player, Sprite, TileData, Transform};
 
 use renderer::{ColorFormat, DepthFormat};
-use renderer::tiled::{TileMapPlane, PlaneRenderer};
 
 use spritesheet::Spritesheet;
 
@@ -84,7 +83,8 @@ fn main() {
     let image = tileset.images.get(0).unwrap();
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
-    let (mut tile_map_render_data, walkable_groups, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map, &tiles_texture, &mut factory, &target);
+    let mut tile_map_render_data = utils::tiled::get_map_render_data(&map, &tiles_texture, &mut factory, &target);
+    let (walkable_groups, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map);
 
     let mut world = World::new();
     setup_world(&mut world, &window, walkable_groups, &map);

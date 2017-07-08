@@ -4,12 +4,8 @@ extern crate genmesh;
 extern crate tiled;
 extern crate specs;
 
-use cgmath::{Matrix4, Vector3, SquareMatrix};
+use cgmath::{Matrix4, SquareMatrix};
 
-use genmesh::{Triangulate};
-use genmesh::generators::{SharedVertex, IndexedPolygon};
-
-use tiled::{Tileset};
 use specs::World;
 
 use renderer;

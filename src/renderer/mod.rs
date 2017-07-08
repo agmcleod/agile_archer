@@ -3,7 +3,7 @@ extern crate cgmath;
 extern crate specs;
 
 use specs::World;
-use cgmath::{SquareMatrix, Matrix4, Point3, Vector3};
+use cgmath::{SquareMatrix, Matrix4, Vector3};
 use gfx::traits::FactoryExt;
 
 use components;
