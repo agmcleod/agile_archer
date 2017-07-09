@@ -93,7 +93,6 @@ pub fn parse_out_map_layers(map: &tiled::Map) -> (Vec<HashMap<usize, Vec<usize>>
     let mut groups: Vec<Vec<(i32, i32)>> = Vec::new();
 
     for (col, rows) in ground_tiles.iter() {
-        println!("{} {:?}", col, rows);
         for row in rows {
             let mut found = false;
             let mut temp_row = 0;

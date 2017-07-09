@@ -51,16 +51,15 @@ impl<'a> System<'a> for PlayerMovement {
 
         for (player, transform) in (&mut players, &mut transforms).join() {
             if input.mouse_pressed && !player.moving {
-                for group in &tile_data.walkable_groups {
-                    if let Some(xs) = group.get(&(mouse_tile.1 as usize)) {
-                        if xs.contains(&(mouse_tile.0 as usize)) {
-                            player.moving = true;
-                            player.movement_route = astar::find_path(
-                                &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
-                                (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
-                                (mouse_tile.0 as usize, mouse_tile.1 as usize)
-                            );
-                        }
+                let group = &tile_data.walkable_groups[tile_data.player_group_index];
+                if let Some(xs) = group.get(&(mouse_tile.1 as usize)) {
+                    if xs.contains(&(mouse_tile.0 as usize)) {
+                        player.moving = true;
+                        player.movement_route = astar::find_path(
+                            &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
+                            (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
+                            (mouse_tile.0 as usize, mouse_tile.1 as usize)
+                        );
                     }
                 }
             } else if player.moving {
