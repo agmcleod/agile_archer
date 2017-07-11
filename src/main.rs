@@ -84,7 +84,7 @@ fn main() {
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
     let mut tile_map_render_data = utils::tiled::get_map_render_data(&map, &tiles_texture, &mut factory, &target);
-    let (walkable_groups, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map);
+    let (walkable_groups, _, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map);
 
     let mut world = World::new();
     setup_world(&mut world, &window, walkable_groups, &map);
