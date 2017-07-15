@@ -6,6 +6,7 @@ use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
 use renderer;
 use renderer::tiled::{TileMapPlane, PlaneRenderer};
+use types::TileMapping;
 
 const COLLISION_LAYERS: [&str; 1] = ["ground"];
 
@@ -21,7 +22,7 @@ fn for_each_cell<F>(layer: &tiled::Layer, include_zero: bool, mut cb: F)
     }
 }
 
-fn add_column_above_to_ground(x: usize, y: usize, ground_tiles: &mut HashMap<i32, Vec<i32>>, ground_x_keys: &mut Vec<i32>) {
+fn add_column_above_to_ground(x: usize, y: usize, ground_tiles: &mut TileMapping<i32>, ground_x_keys: &mut Vec<i32>) {
     // it is open, so let's add it
     // we track x by y instead of y by x, as we need to go in that order for the tile grouping of grounds
     let x = x as i32;
@@ -49,12 +50,12 @@ pub fn get_map_render_data<R, F>(
     }).collect::<Vec<PlaneRenderer<R>>>()
 }
 
-pub fn parse_out_map_layers(map: &tiled::Map) -> (Vec<HashMap<usize, Vec<usize>>>, HashMap<usize, Vec<usize>>, HashMap<usize, Vec<usize>>) {
+pub fn parse_out_map_layers(map: &tiled::Map) -> (Vec<TileMapping<usize>>, TileMapping<usize>, TileMapping<usize>) {
     // stored x by y, in order to process data correctly
-    let mut temp_ground_tiles: HashMap<i32, Vec<i32>> = HashMap::new();
+    let mut temp_ground_tiles: TileMapping<i32> = TileMapping(HashMap::new());
     let mut ground_x_keys: Vec<i32> = Vec::new();
     // y by x, for the rest of the game
-    let mut unpassable_tiles: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut unpassable_tiles: TileMapping<usize> = TileMapping(HashMap::new());
     for layer in map.layers.iter() {
         if COLLISION_LAYERS.contains(&layer.name.as_ref()) {
             for_each_cell(&layer, false, |x, y, _| {
@@ -116,9 +117,9 @@ pub fn parse_out_map_layers(map: &tiled::Map) -> (Vec<HashMap<usize, Vec<usize>>
         }
     }
 
-    let mut walkable_coords: Vec<HashMap<usize, Vec<usize>>> = Vec::new();
+    let mut walkable_coords: Vec<TileMapping<usize>> = Vec::new();
     for pair in walkable_coord_pairs {
-        let mut coords: HashMap<usize, Vec<usize>> = HashMap::new();
+        let mut coords: TileMapping<usize> = TileMapping(HashMap::new());
         for (y, x) in pair {
             let y = y as usize;
             let x = x as usize;
@@ -132,7 +133,7 @@ pub fn parse_out_map_layers(map: &tiled::Map) -> (Vec<HashMap<usize, Vec<usize>>
         walkable_coords.push(coords);
     }
 
-    let mut jump_targets: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut jump_targets: TileMapping<usize> = TileMapping(HashMap::new());
 
     for x in 0..(map.width as usize) {
         for y in 0..(map.height as usize) {

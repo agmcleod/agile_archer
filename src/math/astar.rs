@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, BinaryHeap};
+use types::TileMapping;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TileType {
@@ -71,7 +72,7 @@ fn get_neighbours(pos: &(usize, usize), tiles: &Vec<Vec<TileType>>) -> Vec<(usiz
     neighbours
 }
 
-pub fn build_grid_for_map(closed_tiles: &HashMap<usize, Vec<usize>>, tiles_wide: usize, tiles_high: usize) -> Vec<Vec<TileType>> {
+pub fn build_grid_for_map(closed_tiles: &TileMapping<usize>, tiles_wide: usize, tiles_high: usize) -> Vec<Vec<TileType>> {
     let mut tiles: Vec<Vec<TileType>> = Vec::with_capacity(tiles_high);
     for y in 0..tiles_high {
         let mut row = Vec::with_capacity(tiles_wide);

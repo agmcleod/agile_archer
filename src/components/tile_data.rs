@@ -4,24 +4,27 @@ use specs::Component;
 use std::collections::HashMap;
 use tiled::Map;
 use cgmath::Vector2;
+use types::TileMapping;
 
 #[derive(Debug)]
 pub struct TileData {
-    pub walkable_groups: Vec<HashMap<usize, Vec<usize>>>,
+    pub walkable_groups: Vec<TileMapping<usize>>,
     pub map_size: [i32; 2],
     pub map_dimensions: [i32; 2],
     pub tile_size: [i32; 2],
     pub player_group_index: usize,
+    pub jump_targets: TileMapping<usize>,
 }
 
 impl TileData {
-    pub fn new(walkable_groups: Vec<HashMap<usize, Vec<usize>>>, map: &Map) -> TileData {
+    pub fn new(walkable_groups: Vec<TileMapping<usize>>, map: &Map, jump_targets: TileMapping<usize>) -> TileData {
         TileData{
             walkable_groups: walkable_groups,
             map_size: [map.width as i32, map.height as i32],
             map_dimensions: [(map.width * map.tile_width) as i32, (map.height * map.tile_height) as i32],
             tile_size: [map.tile_width as i32, map.tile_height as i32],
             player_group_index: 0,
+            jump_targets: jump_targets,
         }
     }
 

@@ -30,6 +30,8 @@ mod math;
 mod spritesheet;
 mod systems;
 mod utils;
+mod types;
+use types::TileMapping;
 
 use components::{Camera, HighlightTile, Input, Player, Sprite, TileData, Transform};
 
@@ -37,10 +39,10 @@ use renderer::{ColorFormat, DepthFormat};
 
 use spritesheet::Spritesheet;
 
-fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<HashMap<usize, Vec<usize>>>, map: &tiled::Map) {
+fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<TileMapping<usize>>, map: &tiled::Map, jump_targets: TileMapping<usize>) {
     world.add_resource::<Camera>(Camera(renderer::get_ortho()));
     world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
-    world.add_resource::<TileData>(TileData::new(walkable_groups, map));
+    world.add_resource::<TileData>(TileData::new(walkable_groups, map, jump_targets));
     world.register::<HighlightTile>();
     world.register::<Sprite>();
     world.register::<Transform>();
@@ -84,10 +86,10 @@ fn main() {
     let tiles_texture = loader::gfx_load_texture(format!("./resources/{}", image.source).as_ref(), &mut factory);
 
     let mut tile_map_render_data = utils::tiled::get_map_render_data(&map, &tiles_texture, &mut factory, &target);
-    let (walkable_groups, _, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map);
+    let (walkable_groups, jump_targets, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map);
 
     let mut world = World::new();
-    setup_world(&mut world, &window, walkable_groups, &map);
+    setup_world(&mut world, &window, walkable_groups, &map, jump_targets);
 
     let pathable_grid: Vec<Vec<math::astar::TileType>> = math::astar::build_grid_for_map(&unpassable_tiles, map.width as usize, map.height as usize);
 
