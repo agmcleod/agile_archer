@@ -2,7 +2,7 @@ extern crate specs;
 
 use std::ops::Deref;
 use specs::{Fetch, Join, ReadStorage, WriteStorage, System};
-use components::{Input, HighlightTile, Player, Sprite, TileData, Transform};
+use components::{Input, HighlightTile, Player, PlayerActionState, Sprite, TileData, Transform};
 use math::astar;
 use types::TileMapping;
 
@@ -56,27 +56,27 @@ impl<'a> System<'a> for PlayerMovement {
         }
 
         for (player, transform) in (&mut players, &mut transforms).join() {
-            if input.mouse_pressed && !player.moving {
+            if input.mouse_pressed && !player.moving() {
                 let group = &tile_data.walkable_groups[tile_data.player_group_index];
                 if group.contains(&mouse_tile.1, &mouse_tile.1) {
-                    player.moving = true;
+                    player.action_state = PlayerActionState::Moving;
                     player.movement_route = astar::find_path(
                         &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
                         (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
                         mouse_tile
                     );
                 }
-            } else if player.moving {
+            } else if player.moving() {
                 // will need to track this differently to lerp at somepoint
                 if let Some(next_pos) = player.movement_route.iter().next() {
                     transform.pos.x = next_pos.0 as i32 * tile_data.tile_size[0];
                     transform.pos.y = tile_data.map_dimensions[1] - (next_pos.1 as i32 * tile_data.tile_size[1]) - tile_data.tile_size[1];
                 } else {
-                    player.moving = false;
+                    player.action_state = PlayerActionState::Still;
                 }
 
                 // passed through a position
-                if player.moving {
+                if player.moving() {
                     player.movement_route.remove(0);
                 }
             }
