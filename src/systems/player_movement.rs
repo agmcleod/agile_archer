@@ -17,6 +17,12 @@ impl PlayerMovement {
             mouse_pos.1 / tile_size[1],
         )
     }
+
+    fn move_highlight_to_mouse(&self, mouse_tile: &(usize, usize), transform: &mut Transform, tile_data: &TileData, sprite: &mut Sprite) {
+        sprite.visible = true;
+        transform.pos.x = mouse_tile.0 as i32 * tile_data.tile_size[1];
+        transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 as i32 * tile_data.tile_size[1]) - tile_data.tile_size[1];
+    }
 }
 
 impl<'a> System<'a> for PlayerMovement {
@@ -39,32 +45,25 @@ impl<'a> System<'a> for PlayerMovement {
         let mouse_tile = self.get_mouse_tile(&input.mouse_pos, &tile_data.tile_size);
         let mouse_tile = (mouse_tile.0 as usize, mouse_tile.1 as usize);
 
-        for (_, sprite, transform) in (&highlight_tile_storage, &mut sprites, &mut transforms).join() {
+        for (_, mut sprite, mut transform) in (&highlight_tile_storage, &mut sprites, &mut transforms).join() {
             sprite.visible = false;
             let group = &tile_data.walkable_groups[tile_data.player_group_index];
             if group.contains(&mouse_tile.1, &mouse_tile.0) {
-                sprite.visible = true;
-                transform.pos.x = mouse_tile.0 as i32 * tile_data.tile_size[1];
-                transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 as i32 * tile_data.tile_size[1]) - tile_data.tile_size[1];
+                self.move_highlight_to_mouse(&mouse_tile, &mut transform, &tile_data, &mut sprite);
             }
 
             if tile_data.jump_targets.contains(&mouse_tile.1, &mouse_tile.0) {
-                sprite.visible = true;
-                transform.pos.x = mouse_tile.0 as i32 * tile_data.tile_size[1];
-                transform.pos.y = tile_data.map_dimensions[1] - (mouse_tile.1 as i32 * tile_data.tile_size[1]) - tile_data.tile_size[1];
+                self.move_highlight_to_mouse(&mouse_tile, &mut transform, &tile_data, &mut sprite);
             }
         }
 
         for (player, transform) in (&mut players, &mut transforms).join() {
             if input.mouse_pressed && !player.moving() && !player.jumping() {
                 let group = &tile_data.walkable_groups[tile_data.player_group_index];
-                let mut target_selected = false;
                 if group.contains(&mouse_tile.1, &mouse_tile.1) {
-                    target_selected = true;
                     player.action_state = PlayerActionState::Moving;
                 } else if tile_data.jump_targets.contains(&mouse_tile.1, &mouse_tile.0) {
                     player.action_state = PlayerActionState::Jumping;
-                    target_selected = true;
                 }
                 player.movement_route = astar::find_path(
                     &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
