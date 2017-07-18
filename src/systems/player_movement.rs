@@ -56,27 +56,38 @@ impl<'a> System<'a> for PlayerMovement {
         }
 
         for (player, transform) in (&mut players, &mut transforms).join() {
-            if input.mouse_pressed && !player.moving() {
+            if input.mouse_pressed && !player.moving() && !player.jumping() {
                 let group = &tile_data.walkable_groups[tile_data.player_group_index];
+                let mut target_selected = false;
                 if group.contains(&mouse_tile.1, &mouse_tile.1) {
+                    target_selected = true;
                     player.action_state = PlayerActionState::Moving;
-                    player.movement_route = astar::find_path(
-                        &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
-                        (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
-                        mouse_tile
-                    );
+                } else if tile_data.jump_targets.contains(&mouse_tile.1, &mouse_tile.0) {
+                    player.action_state = PlayerActionState::Jumping;
+                    target_selected = true;
                 }
-            } else if player.moving() {
+                player.movement_route = astar::find_path(
+                    &self.pathable_grid, ((transform.pos.x / tile_data.tile_size[0]) as usize,
+                    (tile_data.map_size[1] - transform.pos.y / tile_data.tile_size[1]) as usize),
+                    mouse_tile
+                );
+            } else if player.moving() || player.jumping() {
                 // will need to track this differently to lerp at somepoint
+                let mut done = false;
                 if let Some(next_pos) = player.movement_route.iter().next() {
                     transform.pos.x = next_pos.0 as i32 * tile_data.tile_size[0];
                     transform.pos.y = tile_data.map_dimensions[1] - (next_pos.1 as i32 * tile_data.tile_size[1]) - tile_data.tile_size[1];
                 } else {
-                    player.action_state = PlayerActionState::Still;
+                    if player.moving() {
+                        player.action_state = PlayerActionState::OnGround;
+                    } else if player.jumping() {
+                        player.action_state = PlayerActionState::InAir;
+                    }
+                    done = true;
                 }
 
                 // passed through a position
-                if player.moving() {
+                if !done {
                     player.movement_route.remove(0);
                 }
             }
