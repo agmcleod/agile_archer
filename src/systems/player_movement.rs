@@ -70,7 +70,7 @@ impl<'a> System<'a> for PlayerMovement {
                 } else {
                     let group = &tile_data.walkable_groups[tile_data.player_group_index];
                     let mut found = false;
-                    if group.contains(&mouse_tile.1, &mouse_tile.1) {
+                    if group.contains(&mouse_tile.1, &mouse_tile.0) {
                         player.action_state = PlayerActionState::Moving;
                         found = true;
                     } else if tile_data.jump_targets.contains(&mouse_tile.1, &mouse_tile.0) {
