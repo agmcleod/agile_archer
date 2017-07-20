@@ -30,6 +30,10 @@ impl Player {
     pub fn jumping(&self) -> bool {
         self.action_state == PlayerActionState::Jumping
     }
+
+    pub fn in_air(&self) -> bool {
+        self.action_state == PlayerActionState::InAir
+    }
 }
 
 impl Component for Player {
