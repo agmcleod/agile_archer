@@ -43,6 +43,12 @@ impl TileData {
 
         false
     }
+
+    pub fn get_tile_for_world_position(&self, position: &Vector2<i32>) -> (usize, usize) {
+        let mut player_tile = ((position.x / &self.tile_size[0]) as usize, (position.y / &self.tile_size[1]) as usize);
+        player_tile.1 = self.map_size[1] as usize - player_tile.1;
+        player_tile
+    }
 }
 
 impl Component for TileData {

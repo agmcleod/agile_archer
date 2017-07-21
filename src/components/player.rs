@@ -13,6 +13,7 @@ pub enum PlayerActionState {
 pub struct Player {
     pub action_state: PlayerActionState,
     pub movement_route: Vec<(usize, usize)>,
+    pub jump_distance: usize,
 }
 
 impl Player {
@@ -20,6 +21,7 @@ impl Player {
         Player{
             action_state: PlayerActionState::OnGround,
             movement_route: Vec::new(),
+            jump_distance: 6,
         }
     }
 

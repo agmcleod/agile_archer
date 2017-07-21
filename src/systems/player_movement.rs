@@ -5,6 +5,7 @@ use specs::{Fetch, FetchMut, Join, ReadStorage, WriteStorage, System};
 use components::{Input, HighlightTile, Player, PlayerActionState, Sprite, TileData, Transform};
 use math::astar;
 use types::TileMapping;
+use utils::movement;
 
 pub struct PlayerMovement{
     pub pathable_grid: Vec<Vec<astar::TileType>>,
@@ -25,9 +26,10 @@ impl PlayerMovement {
     }
 
     fn astar_path_to_mouse(&self, player_transform: &Transform, tile_data: &TileData, mouse_tile: (usize, usize)) -> Vec<(usize, usize)> {
+        let player_tile = tile_data.get_tile_for_world_position(&player_transform.pos);
         astar::find_path(
-            &self.pathable_grid, ((player_transform.pos.x / tile_data.tile_size[0]) as usize,
-            (tile_data.map_size[1] - player_transform.pos.y / tile_data.tile_size[1]) as usize),
+            &self.pathable_grid,
+            player_tile,
             mouse_tile
         )
     }
@@ -54,11 +56,16 @@ impl<'a> System<'a> for PlayerMovement {
         let mouse_tile = (mouse_tile.0 as usize, mouse_tile.1 as usize);
 
         let mut player_in_air = false;
+        let mut player_distance = 0;
+        let mut player_jump_distance = 0;
 
         for (player, transform) in (&mut players, &mut transforms).join() {
             player_in_air = player.in_air();
+            player_jump_distance = player.jump_distance;
+            let player_tile = tile_data.get_tile_for_world_position(&transform.pos);
+            player_distance = movement::distance_to_tile(&player_tile, &mouse_tile);
             if input.mouse_pressed && !player.moving() && !player.jumping() {
-                if player.in_air() {
+                if player.in_air() && player_distance <= player.jump_distance {
                     for (i, group) in tile_data.walkable_groups.iter().enumerate() {
                         if group.contains(&mouse_tile.1, &mouse_tile.0) {
                             player.action_state = PlayerActionState::Moving;
@@ -106,7 +113,7 @@ impl<'a> System<'a> for PlayerMovement {
 
         for (_, mut sprite, mut transform) in (&highlight_tile_storage, &mut sprites, &mut transforms).join() {
             sprite.visible = false;
-            if player_in_air {
+            if player_in_air && player_distance <= player_jump_distance {
                 for group in &tile_data.walkable_groups {
                     if group.contains(&mouse_tile.1, &mouse_tile.0) {
                         self.move_highlight_to_mouse(&mouse_tile, &mut transform, &tile_data, &mut sprite);
