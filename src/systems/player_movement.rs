@@ -119,13 +119,11 @@ impl<'a> System<'a> for PlayerMovement {
                         self.move_highlight_to_mouse(&mouse_tile, &mut transform, &tile_data, &mut sprite);
                     }
                 }
-            } else {
+            } else if !player_in_air {
                 let group = &tile_data.walkable_groups[tile_data.player_group_index];
                 if group.contains(&mouse_tile.1, &mouse_tile.0) {
                     self.move_highlight_to_mouse(&mouse_tile, &mut transform, &tile_data, &mut sprite);
-                }
-
-                if tile_data.jump_targets.contains(&mouse_tile.1, &mouse_tile.0) {
+                } else if player_distance <= player_jump_distance && tile_data.jump_targets.contains(&mouse_tile.1, &mouse_tile.0) {
                     self.move_highlight_to_mouse(&mouse_tile, &mut transform, &tile_data, &mut sprite);
                 }
             }

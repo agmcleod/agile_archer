@@ -21,7 +21,7 @@ impl Player {
         Player{
             action_state: PlayerActionState::OnGround,
             movement_route: Vec::new(),
-            jump_distance: 6,
+            jump_distance: 8,
         }
     }
 
