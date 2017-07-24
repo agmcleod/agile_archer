@@ -2,6 +2,10 @@ use std::collections::HashMap;
 use std::cmp::Eq;
 use std::hash::Hash;
 
+mod turn;
+
+pub use self::turn::*;
+
 #[derive(Debug)]
 pub struct TileMapping<N: Eq + Hash>(pub HashMap<N, Vec<N>>);
 

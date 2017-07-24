@@ -1,10 +1,8 @@
-extern crate specs;
-
 use std::ops::{Deref, DerefMut};
 use specs::{Fetch, FetchMut, Join, ReadStorage, WriteStorage, System};
-use components::{Input, HighlightTile, Player, PlayerActionState, Sprite, TileData, Transform};
+use components::{Input, GameState, HighlightTile, Player, PlayerActionState, Sprite, TileData, Transform};
 use math::astar;
-use types::TileMapping;
+use types::{TileMapping, Turn};
 use utils::movement;
 
 pub struct PlayerMovement{
@@ -37,6 +35,7 @@ impl PlayerMovement {
 
 impl<'a> System<'a> for PlayerMovement {
     type SystemData = (
+        Fetch<'a, GameState>,
         ReadStorage<'a, HighlightTile>,
         Fetch<'a, Input>,
         WriteStorage<'a, Player>,
@@ -46,9 +45,12 @@ impl<'a> System<'a> for PlayerMovement {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        use std::ops::Deref;
-        let (highlight_tile_storage, input_storage, mut players, mut sprites, mut tile_data_storage, mut transforms) = data;
+        let (game_state_storage, highlight_tile_storage, input_storage, mut players, mut sprites, mut tile_data_storage, mut transforms) = data;
 
+        let game_state: &GameState = game_state_storage.deref();
+        if game_state.turn == Turn::Enemy {
+            return
+        }
         let input: &Input = input_storage.deref();
         let tile_data: &mut TileData = tile_data_storage.deref_mut();
 

@@ -20,7 +20,7 @@ impl Input {
             key_map.insert(key, false);
         }
 
-        Input {
+        Input{
             hidpi_factor: hidpi_factor,
             pressed_keys: key_map,
             mouse_pos: (0, 0),

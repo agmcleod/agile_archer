@@ -33,7 +33,7 @@ mod utils;
 mod types;
 use types::TileMapping;
 
-use components::{Camera, HighlightTile, Input, Player, Sprite, TileData, Transform};
+use components::{Camera, GameState, HighlightTile, Input, Player, Sprite, TileData, Transform};
 
 use renderer::{ColorFormat, DepthFormat};
 
@@ -43,6 +43,7 @@ fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<
     world.add_resource::<Camera>(Camera(renderer::get_ortho()));
     world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
     world.add_resource::<TileData>(TileData::new(walkable_groups, map, jump_targets));
+    world.add_resource::<GameState>(GameState::new());
     world.register::<HighlightTile>();
     world.register::<Sprite>();
     world.register::<Transform>();
@@ -95,6 +96,7 @@ fn main() {
 
     let mut dispatcher = DispatcherBuilder::new()
         .add(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", &[])
+        .add(systems::ProcessTurn{}, "process_turn", &[])
         .build();
 
     let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();

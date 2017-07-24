@@ -13,7 +13,7 @@ pub struct Transform {
 
 impl Transform {
     pub fn new(x: i32, y: i32, w: u16, h: u16, rotation: f32, scale_x: f32, scale_y: f32) -> Transform {
-        Transform {
+        Transform{
             pos: Vector2{ x: x, y: y},
             size: Vector2{ x: w, y: h },
             rotation: rotation,
