@@ -17,6 +17,24 @@ impl PlayerMovement {
         )
     }
 
+    fn get_cost_for_move(&self, distance: usize, action: &PlayerActionState) -> usize {
+        let mut cost = 0;
+        match *action {
+            PlayerActionState::Jumping => {
+                cost = 3;
+            },
+            PlayerActionState::Moving => {
+                if distance > 10 {
+                    cost = 3;
+                } else {
+                    cost = 2;
+                }
+            },
+            _ => {},
+        }
+        cost
+    }
+
     fn move_highlight_to_mouse(&self, mouse_tile: &(usize, usize), transform: &mut Transform, tile_data: &TileData, sprite: &mut Sprite) {
         sprite.visible = true;
         transform.pos.x = mouse_tile.0 as i32 * tile_data.tile_size[1];
@@ -65,7 +83,7 @@ impl<'a> System<'a> for PlayerMovement {
             player_in_air = player.in_air();
             player_jump_distance = player.jump_distance;
             let player_tile = tile_data.get_tile_for_world_position(&transform.pos);
-            player_distance = movement::distance_to_tile(&player_tile, &mouse_tile);
+            player_distance = movement::distance_to_tile(&player_tile, &mouse_tile, false);
             if input.mouse_pressed && !player.moving() && !player.jumping() {
                 if player.in_air() && player_distance <= player.jump_distance {
                     for (i, group) in tile_data.walkable_groups.iter().enumerate() {
@@ -91,6 +109,8 @@ impl<'a> System<'a> for PlayerMovement {
                         player.movement_route = self.astar_path_to_mouse(&transform, &tile_data, mouse_tile);
                     }
                 }
+                let cost = self.get_cost_for_move(movement::distance_to_tile(&player_tile, &mouse_tile, true), &player.action_state);
+                player.take_energy(cost);
             } else if player.moving() || player.jumping() {
                 // will need to track this differently to lerp at somepoint
                 let mut done = false;

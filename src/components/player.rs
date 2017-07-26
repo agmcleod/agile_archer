@@ -44,6 +44,16 @@ impl Player {
     pub fn reset_energy(&mut self) {
         self.energy = BASE_ENERGY;
     }
+
+    pub fn take_energy(&mut self, energy: usize) -> bool {
+        if energy >= self.energy {
+            self.energy = 0;
+            true
+        } else {
+            self.energy -= energy;
+            false
+        }
+    }
 }
 
 impl Component for Player {
