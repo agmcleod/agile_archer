@@ -33,7 +33,7 @@ mod utils;
 mod types;
 use types::TileMapping;
 
-use components::{Camera, GameState, HighlightTile, Input, Player, Sprite, TileData, Transform};
+use components::{AnimationSheet, Camera, Enemy, GameState, HighlightTile, Input, Player, Sprite, TileData, Transform};
 
 use renderer::{ColorFormat, DepthFormat};
 
@@ -44,6 +44,8 @@ fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<
     world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
     world.add_resource::<TileData>(TileData::new(walkable_groups, map, jump_targets));
     world.add_resource::<GameState>(GameState::new());
+    world.register::<AnimationSheet>();
+    world.register::<Enemy>();
     world.register::<HighlightTile>();
     world.register::<Sprite>();
     world.register::<Transform>();
@@ -51,8 +53,27 @@ fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<
 
     let player_pos = Vector2::new(0, 64);
 
-    world.create_entity().with(Transform::new(player_pos.x, player_pos.y, 32, 64, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("player.png"), visible: true }).with(Player::new());
-    world.create_entity().with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0)).with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false }).with(HighlightTile{});
+    world.create_entity()
+        .with(Transform::new(player_pos.x, player_pos.y, 32, 64, 0.0, 1.0, 1.0))
+        .with(Sprite{ frame_name: String::from("player.png"), visible: true })
+        .with(Player::new());
+
+    let mut animation_sheet = AnimationSheet::new(0.1);
+    animation_sheet.add_animation(String::from("idle"), vec![
+        String::from("skeleton_1.png"),
+        String::from("skeleton_2.png"),
+        String::from("skeleton_3.png"),
+        String::from("skeleton_4.png"),
+    ]);
+    animation_sheet.set_current_animation(String::from("idle"));
+    world.create_entity()
+        .with(Transform::new(128, 160, 32, 32, 0.0, 1.0, 1.0))
+        .with(animation_sheet)
+        .with(Enemy{});
+    world.create_entity()
+        .with(Transform::new(0, 0, 32, 32, 0.0, 1.0, 1.0))
+        .with(Sprite{ frame_name: String::from("transparenttile.png"), visible: false })
+        .with(HighlightTile{});
 
     let mut tile_data_res = world.write_resource::<TileData>();
     let mut tile_data = tile_data_res.deref_mut();
@@ -97,6 +118,7 @@ fn main() {
     let mut dispatcher = DispatcherBuilder::new()
         .add(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", &[])
         .add(systems::ProcessTurn{}, "process_turn", &[])
+        .add(systems::AnimationSystem::new(), "animation_system", &[])
         .build();
 
     let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();
@@ -149,11 +171,16 @@ fn main() {
 
         let sprites = world.read::<Sprite>();
         let transforms = world.read::<Transform>();
+        let animation_sheets = world.read::<AnimationSheet>();
 
         for (sprite, transform) in (&sprites, &transforms).join() {
             if sprite.visible {
-                basic.render(&mut encoder, &world, &mut factory, &transform, &sprite, &spritesheet, &asset_texture);
+                basic.render(&mut encoder, &world, &mut factory, &transform, &sprite.frame_name, &spritesheet, &asset_texture);
             }
+        }
+
+        for (animation_sheet, transform) in (&animation_sheets, &transforms).join() {
+            basic.render(&mut encoder, &world, &mut factory, &transform, animation_sheet.get_current_frame(), &spritesheet, &asset_texture);
         }
 
         encoder.flush(&mut device);

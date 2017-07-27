@@ -3,9 +3,7 @@ use specs::{Fetch, FetchMut, Join, ReadStorage, WriteStorage, System};
 use components::{GameState, HighlightTile, Player, Sprite};
 use types::Turn;
 
-pub struct ProcessTurn{
-
-}
+pub struct ProcessTurn;
 
 impl<'a> System<'a> for ProcessTurn {
     type SystemData = (

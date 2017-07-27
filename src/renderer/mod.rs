@@ -79,7 +79,7 @@ impl<R> Basic<R>
         world: &World,
         factory: &mut F,
         transform: &components::Transform,
-        sprite: &components::Sprite,
+        frame_name: &String,
         spritesheet: &Spritesheet,
         texture: &gfx::handle::ShaderResourceView<R, [f32; 4]>)
         where R: gfx::Resources, C: gfx::CommandBuffer<R>, F: gfx::Factory<R>
@@ -94,7 +94,7 @@ impl<R> Basic<R>
         let h = transform.size.y as f32;
 
         let region = spritesheet.frames.iter().filter(|frame|
-            frame.filename == sprite.frame_name
+            frame.filename == *frame_name
         ).collect::<Vec<&Frame>>()[0];
         let sw = spritesheet.meta.size.w as f32;
         let sh = spritesheet.meta.size.h as f32;

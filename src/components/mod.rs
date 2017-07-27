@@ -1,4 +1,6 @@
+mod animation_sheet;
 mod camera;
+mod enemy;
 mod game_state;
 mod highlight_tile;
 mod input;
@@ -7,7 +9,9 @@ mod sprite;
 mod tile_data;
 mod transform;
 
+pub use self::animation_sheet::*;
 pub use self::camera::*;
+pub use self::enemy::*;
 pub use self::game_state::*;
 pub use self::highlight_tile::*;
 pub use self::input::*;
