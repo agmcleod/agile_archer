@@ -104,6 +104,7 @@ gfx_defines!{
     vertex Vertex {
         pos: [f32; 2] = "a_Pos",
         uv: [f32; 2] = "a_Uv",
+        color: [f32; 4] = "a_Color",
     }
 
     constant Projection {
@@ -141,10 +142,12 @@ impl <R>PlaneRenderer<R>
             pipe::new()
         ).unwrap();
 
+        let white = [1.0; 4];
         let data: Vec<Vertex> = tilemap_plane.data.iter().map(|quad| {
             Vertex{
                 pos: quad.pos,
                 uv: quad.uv,
+                color: white,
             }
         }).collect();
         let (vbuf, slice) = factory.create_vertex_buffer_with_slice(&data, &tilemap_plane.index_data[..]);
