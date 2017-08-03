@@ -20,7 +20,8 @@ use specs::{DispatcherBuilder, Join, World};
 use std::path::Path;
 use std::fs::File;
 use tiled::parse;
-use glutin::{ElementState, MouseButton, VirtualKeyCode};
+use glutin::{Event, ElementState, MouseButton, VirtualKeyCode, WindowEvent};
+use glutin::GlContext;
 use cgmath::Vector2;
 
 mod renderer;
@@ -83,13 +84,16 @@ fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<
 }
 
 fn main() {
+    let mut events_loop = glutin::EventsLoop::new();
     let dim = renderer::get_dimensions();
     let builder = glutin::WindowBuilder::new()
         .with_title("Agile Archer".to_string())
-        .with_dimensions(dim[0] as u32, dim[1] as u32)
-        .with_vsync();
+        .with_dimensions(dim[0] as u32, dim[1] as u32);
+
+    let context = glutin::ContextBuilder::new();
+
     let (window, mut device, mut factory, main_color, mut main_depth) =
-        gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder);
+        gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder, context, &events_loop);
 
     let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
 
@@ -125,38 +129,44 @@ fn main() {
     let spritesheet: Spritesheet = serde_json::from_str(asset_data.as_ref()).unwrap();
     let asset_texture = loader::gfx_load_texture("./resources/assets.png", &mut factory);
 
-    'main: loop {
-        for event in window.poll_events() {
+    let mut running = true;
+    while running {
+        events_loop.poll_events(|event| {
             match event {
-                glutin::Event::MouseMoved(x, y) => {
-                    let mut input_res = world.write_resource::<Input>();
-                    let mut input = input_res.deref_mut();
-                    input.mouse_pos.0 = (x as f32 / input.hidpi_factor) as i32;
-                    input.mouse_pos.1 = (y as f32 / input.hidpi_factor) as i32;
-                },
-                glutin::Event::MouseInput(mouse_state, MouseButton::Left) => {
-                    let mut input_res = world.write_resource::<Input>();
-                    let mut input = input_res.deref_mut();
-                    match mouse_state {
-                        ElementState::Pressed => input.mouse_pressed = true,
-                        ElementState::Released => input.mouse_pressed = false,
-                    };
-                },
-                glutin::Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) | glutin::Event::Closed => break 'main,
-                glutin::Event::KeyboardInput(key_state, _, key) => {
-                    let mut input_res = world.write_resource::<Input>();
-                    let mut input = input_res.deref_mut();
-                    let key = key.unwrap();
-                    if input.pressed_keys.contains_key(&key) {
-                        match key_state {
-                            ElementState::Pressed => input.pressed_keys.insert(key, true),
-                            ElementState::Released => input.pressed_keys.insert(key, false),
+                Event::WindowEvent{ event, .. } => match event {
+                    WindowEvent::MouseMoved{ position: (x, y), .. } => {
+                        let mut input_res = world.write_resource::<Input>();
+                        let mut input = input_res.deref_mut();
+                        input.mouse_pos.0 = (x as f32 / input.hidpi_factor) as i32;
+                        input.mouse_pos.1 = (y as f32 / input.hidpi_factor) as i32;
+                    },
+                    WindowEvent::MouseInput{ button: MouseButton::Left, state, .. } => {
+                        let mut input_res = world.write_resource::<Input>();
+                        let mut input = input_res.deref_mut();
+                        match state {
+                            ElementState::Pressed => input.mouse_pressed = true,
+                            ElementState::Released => input.mouse_pressed = false,
                         };
-                    }
+                    },
+                    WindowEvent::KeyboardInput{ input: glutin::KeyboardInput{ virtual_keycode: Some(VirtualKeyCode::Escape), .. }, .. } | glutin::WindowEvent::Closed => running = false,
+                    WindowEvent::KeyboardInput{ input, .. } => {
+                        let input_event = input;
+                        let mut input_res = world.write_resource::<Input>();
+                        let mut input = input_res.deref_mut();
+                        if let Some(key) = input_event.virtual_keycode {
+                            if input.pressed_keys.contains_key(&key) {
+                                match input_event.state {
+                                    ElementState::Pressed => input.pressed_keys.insert(key, true),
+                                    ElementState::Released => input.pressed_keys.insert(key, false),
+                                };
+                            }
+                        }
+                    },
+                    _ => {}
                 },
-                _ => {}
+                _ => ()
             }
-        }
+        });
 
         dispatcher.dispatch(&mut world.res);
 
@@ -175,12 +185,12 @@ fn main() {
 
         for (sprite, transform) in (&sprites, &transforms).join() {
             if sprite.visible {
-                basic.render(&mut encoder, &world, &mut factory, &transform, &sprite.frame_name, &spritesheet, &asset_texture);
+                basic.render(&mut encoder, &world, &mut factory, &transform, Some(&sprite.frame_name), &spritesheet, None, Some(&asset_texture));
             }
         }
 
         for (animation_sheet, transform) in (&animation_sheets, &transforms).join() {
-            basic.render(&mut encoder, &world, &mut factory, &transform, animation_sheet.get_current_frame(), &spritesheet, &asset_texture);
+            basic.render(&mut encoder, &world, &mut factory, &transform, Some(animation_sheet.get_current_frame()), &spritesheet, None, Some(&asset_texture));
         }
 
         encoder.flush(&mut device);

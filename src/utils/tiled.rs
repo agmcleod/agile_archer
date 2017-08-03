@@ -5,7 +5,7 @@ use linked_hash_map::LinkedHashMap;
 
 use std::collections::HashMap;
 use renderer;
-use renderer::tiled::{TileMapPlane, PlaneRenderer};
+use renderer::{TileMapPlane, PlaneRenderer};
 use types::TileMapping;
 
 const COLLISION_LAYERS: [&str; 1] = ["ground"];
