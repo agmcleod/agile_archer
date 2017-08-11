@@ -29,6 +29,10 @@ impl Player {
         }
     }
 
+    pub fn get_energy_percentage(&self) -> f32 {
+        self.energy as f32 / BASE_ENERGY as f32
+    }
+
     pub fn moving(&self) -> bool {
         self.action_state == PlayerActionState::Moving
     }
@@ -46,6 +50,7 @@ impl Player {
     }
 
     pub fn take_energy(&mut self, energy: usize) -> bool {
+        println!("take energy: {}", energy);
         if energy >= self.energy {
             self.energy = 0;
             true

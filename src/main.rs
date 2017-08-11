@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::ops::{DerefMut};
 
 use gfx::Device;
-use specs::{DispatcherBuilder, Join, World};
+use specs::{Dispatcher, DispatcherBuilder, Join, World};
 
 use std::path::Path;
 use std::fs::File;
@@ -34,30 +34,40 @@ mod utils;
 mod types;
 use types::TileMapping;
 
-use components::{AnimationSheet, Camera, Enemy, GameState, HighlightTile, Input, Player, Sprite, TileData, Transform};
+use components::{AnimationSheet, Camera, Color, Enemy, EnergyBar, GameState, HighlightTile, Input, Player, Rect, Sprite, TileData, Transform};
 
 use renderer::{ColorFormat, DepthFormat};
 
 use spritesheet::Spritesheet;
 
-fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<TileMapping<usize>>, map: &tiled::Map, jump_targets: TileMapping<usize>) {
+fn setup_world<'a>(world: &mut World, window: &glutin::Window, walkable_groups: Vec<TileMapping<usize>>, map: &tiled::Map, jump_targets: TileMapping<usize>, pathable_grid: Vec<Vec<math::astar::TileType>>) -> Dispatcher<'a, 'a> {
     world.add_resource::<Camera>(Camera(renderer::get_ortho()));
     world.add_resource::<Input>(Input::new(window.hidpi_factor(), vec![VirtualKeyCode::W, VirtualKeyCode::A, VirtualKeyCode::S, VirtualKeyCode::D]));
     world.add_resource::<TileData>(TileData::new(walkable_groups, map, jump_targets));
     world.add_resource::<GameState>(GameState::new());
     world.register::<AnimationSheet>();
+    world.register::<Color>();
     world.register::<Enemy>();
+    world.register::<EnergyBar>();
     world.register::<HighlightTile>();
+    world.register::<Rect>();
     world.register::<Sprite>();
     world.register::<Transform>();
     world.register::<Player>();
 
     let player_pos = Vector2::new(0, 64);
 
-    world.create_entity()
+    let player_entity = world.create_entity()
         .with(Transform::new(player_pos.x, player_pos.y, 32, 64, 0.0, 1.0, 1.0))
         .with(Sprite{ frame_name: String::from("player.png"), visible: true })
-        .with(Player::new());
+        .with(Player::new())
+        .build();
+
+    world.create_entity()
+        .with(Transform::new(800, 610, EnergyBar::get_max_width(), 25, 0.0, 1.0, 1.0))
+        .with(EnergyBar{})
+        .with(Rect{})
+        .with(Color([0.0, 1.0, 0.0, 1.0]));
 
     let mut animation_sheet = AnimationSheet::new(0.1);
     animation_sheet.add_animation(String::from("idle"), vec![
@@ -81,6 +91,13 @@ fn setup_world(world: &mut World, window: &glutin::Window, walkable_groups: Vec<
     if !tile_data.set_player_group_index_from_pos(&player_pos) {
         println!("Start position not on ground: {:?}", player_pos);
     }
+
+    DispatcherBuilder::new()
+        .add(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", &[])
+        .add(systems::ProcessTurn{}, "process_turn", &[])
+        .add(systems::AnimationSystem::new(), "animation_system", &[])
+        .add(systems::EnergyUi{ player_entity: player_entity }, "energy_ui", &["player_movement"])
+        .build()
 }
 
 fn main() {
@@ -115,15 +132,8 @@ fn main() {
     let (walkable_groups, jump_targets, unpassable_tiles) = utils::tiled::parse_out_map_layers(&map);
 
     let mut world = World::new();
-    setup_world(&mut world, &window, walkable_groups, &map, jump_targets);
-
     let pathable_grid: Vec<Vec<math::astar::TileType>> = math::astar::build_grid_for_map(&unpassable_tiles, map.width as usize, map.height as usize);
-
-    let mut dispatcher = DispatcherBuilder::new()
-        .add(systems::PlayerMovement{ pathable_grid: pathable_grid }, "player_movement", &[])
-        .add(systems::ProcessTurn{}, "process_turn", &[])
-        .add(systems::AnimationSystem::new(), "animation_system", &[])
-        .build();
+    let mut dispatcher = setup_world(&mut world, &window, walkable_groups, &map, jump_targets, pathable_grid);
 
     let asset_data = loader::read_text_from_file("./resources/assets.json").unwrap();
     let spritesheet: Spritesheet = serde_json::from_str(asset_data.as_ref()).unwrap();
@@ -182,6 +192,8 @@ fn main() {
         let sprites = world.read::<Sprite>();
         let transforms = world.read::<Transform>();
         let animation_sheets = world.read::<AnimationSheet>();
+        let colors = world.read::<Color>();
+        let rects = world.read::<Rect>();
 
         for (sprite, transform) in (&sprites, &transforms).join() {
             if sprite.visible {
@@ -191,6 +203,10 @@ fn main() {
 
         for (animation_sheet, transform) in (&animation_sheets, &transforms).join() {
             basic.render(&mut encoder, &world, &mut factory, &transform, Some(animation_sheet.get_current_frame()), &spritesheet, None, Some(&asset_texture));
+        }
+
+        for (color, transform, _) in (&colors, &transforms, &rects).join() {
+            basic.render(&mut encoder, &world, &mut factory, &transform, None, &spritesheet, Some(color.0), None);
         }
 
         encoder.flush(&mut device);
